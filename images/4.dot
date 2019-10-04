@@ -1,0 +1,15 @@
+digraph 3 {
+    rankdir = LR
+    q1, q2, q3[shape=doublecircle]
+    q0 -> q1[label="a"]
+
+    q1 -> q3[label="c"]
+
+    q1 -> q2[label="b"]
+
+    q2 -> q2[label="b"]
+    q3 -> q3[label="c"]
+
+    q2 -> q3[label="c"]
+    q3 -> q2[label="b"]
+}

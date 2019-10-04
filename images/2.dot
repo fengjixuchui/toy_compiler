@@ -1,0 +1,10 @@
+digraph 2 {
+    rankdir = LR
+    n1, n2, n3, n4[label=""]
+    n4[shape=doublecircle]
+    n1 -> n2[label="e"]
+    n2 -> n3[label="A"]
+    n3 -> n4[label="e"]
+    n1 -> n4[label="e"]
+    n4 -> n2[label="e"]
+}

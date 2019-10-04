@@ -1,0 +1,10 @@
+digraph 7 {
+    rankdir = LR
+    q0[style=filled, fillcolor="green"]
+    q1, q2[shape=doublecircle, style=filled, fillcolor="red"]
+    q0 -> q1[label="a"]
+
+    q1 -> q2[label="b, c"]
+
+    q2 -> q2[label="b, c"]
+}
