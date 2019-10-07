@@ -57,7 +57,11 @@ class Token {
         return type + " " + lexeme + " " + literal;
     }
 }
+
 ```
+有的 token 没有 literal，有的 token 有。
+
+在本章中只有数字和字符串有 literal，其他的没有。
 
 4. scanner 类
 
