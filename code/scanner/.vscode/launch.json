@@ -6,7 +6,7 @@
             "request": "launch",
             "mainClass": "app.MyLox",
             "projectName": "scanner",
-            "args": "/home/tenshine/Desktop/learn_compiler/code/scanner/src/app/test.lox"
+            "args": "/home/tenshine/Desktop/learn_compiler/code/scanner/src/app/test1.lox"
         }
     ]
 }

@@ -13,5 +13,7 @@ public enum TokenType {
     // Keywords.
     AND, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR, PRINT, RETURN, SUPER, THIS, TRUE, VAR, WHILE,
 
+    并且, 类, 否则, 假, 函数, 循环, 如果, 空, 或者, 输出, 返回, 继承, 这个, 真, 声明, 当,
+    
     EOF
 }
