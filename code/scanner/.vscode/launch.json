@@ -2,10 +2,11 @@
     "configurations": [
         {
             "type": "java",
-            "name": "CodeLens (Launch) - App",
+            "name": "CodeLens (Launch) - MyLox",
             "request": "launch",
-            "mainClass": "app.Lox",
-            "projectName": "4"
+            "mainClass": "app.MyLox",
+            "projectName": "scanner",
+            "args": "/home/tenshine/Desktop/learn_compiler/code/scanner/src/app/test.lox"
         }
     ]
 }
