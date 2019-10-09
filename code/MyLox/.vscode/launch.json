@@ -1,0 +1,12 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "CodeLens (Launch) - BookGenerateAst",
+            "request": "launch",
+            "mainClass": "tools.BookGenerateAst",
+            "projectName": "MyLox",
+            "args": "/home/tenshine/Desktop/learn_compiler/code/MyLox/src/app"
+        },
+    ]
+}
