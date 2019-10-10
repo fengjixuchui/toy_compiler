@@ -2,6 +2,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "CodeLens (Launch) - AstPrinter",
+            "request": "launch",
+            "mainClass": "app.AstPrinter",
+            "projectName": "MyLox"
+        },
+        {
+            "type": "java",
             "name": "CodeLens (Launch) - GenerateAst",
             "request": "launch",
             "mainClass": "tools.GenerateAst",
