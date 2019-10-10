@@ -11,9 +11,9 @@ abstract class Expr {
         R visitUnaryExpr(Unary expr);
     }
     static class Binary extends Expr {
-        Binary(Expr left, Token Opreator, Expr right) {
+        Binary(Expr left, Token opreator, Expr right) {
             this.left = left;
-            this.Opreator = Opreator;
+            this.opreator = opreator;
             this.right = right;
         }
 
@@ -22,7 +22,7 @@ abstract class Expr {
         }
 
         final Expr left;
-        final Token Opreator;
+        final Token opreator;
         final Expr right;
     }
     static class Grouping extends Expr {
