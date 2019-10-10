@@ -1,19 +1,22 @@
-package app;
-
-import java.util.List;
+package booklox;
 
 abstract class Expr {
-    abstract <R> R accept(Visitor<R> visitor);
     interface Visitor<R> {
         R visitBinaryExpr(Binary expr);
+
         R visitGroupingExpr(Grouping expr);
+
         R visitLiteralExpr(Literal expr);
+
         R visitUnaryExpr(Unary expr);
     }
+
+    abstract <R> R accept(Visitor<R> visitor);
+
     static class Binary extends Expr {
-        Binary(Expr left, Token Opreator, Expr right) {
+        Binary(Expr left, Token operator, Expr right) {
             this.left = left;
-            this.Opreator = Opreator;
+            this.operator = operator;
             this.right = right;
         }
 
@@ -22,9 +25,10 @@ abstract class Expr {
         }
 
         final Expr left;
-        final Token Opreator;
+        final Token operator;
         final Expr right;
     }
+
     static class Grouping extends Expr {
         Grouping(Expr expression) {
             this.expression = expression;
@@ -36,6 +40,7 @@ abstract class Expr {
 
         final Expr expression;
     }
+
     static class Literal extends Expr {
         Literal(Object value) {
             this.value = value;
@@ -47,6 +52,7 @@ abstract class Expr {
 
         final Object value;
     }
+
     static class Unary extends Expr {
         Unary(Token operator, Expr right) {
             this.operator = operator;
