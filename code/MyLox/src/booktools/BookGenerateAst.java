@@ -1,4 +1,4 @@
-package tools;
+package booktools;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -16,7 +16,6 @@ public class BookGenerateAst {
         defineAst(outputDir, "Expr", Arrays.asList("Binary   : Expr left, Token operator, Expr right",
                 "Grouping : Expr expression", "Literal  : Object value", "Unary    : Token operator, Expr right"));
     }
-
     private static void defineType(PrintWriter writer, String baseName, String className, String fieldList) {
         writer.println("  static class " + className + " extends " + baseName + " {");
 

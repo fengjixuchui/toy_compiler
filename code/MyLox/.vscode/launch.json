@@ -2,11 +2,32 @@
     "configurations": [
         {
             "type": "java",
+            "name": "CodeLens (Launch) - AstPrinter",
+            "request": "launch",
+            "mainClass": "app.AstPrinter",
+            "projectName": "MyLox"
+        },
+        {
+            "type": "java",
+            "name": "CodeLens (Launch) - GenerateAst",
+            "request": "launch",
+            "mainClass": "tools.GenerateAst",
+            "projectName": "MyLox"
+        },
+        {
+            "type": "java",
+            "name": "CodeLens (Launch) - AstPrinter",
+            "request": "launch",
+            "mainClass": "booklox.AstPrinter",
+            "projectName": "MyLox"
+        },
+        {
+            "type": "java",
             "name": "CodeLens (Launch) - BookGenerateAst",
             "request": "launch",
             "mainClass": "tools.BookGenerateAst",
             "projectName": "MyLox",
             "args": "/home/tenshine/Desktop/learn_compiler/code/MyLox/src/app"
-        },
+        }
     ]
 }
