@@ -1,0 +1,13 @@
+/*digraph 代表有向图 */
+digraph tree {
+    n1[label="+"]
+    n2[label="1"]
+    n3[label="*"]
+    n4[label="2"]
+    n5[label="3"]
+
+    n1 -> n2
+    n1 -> n3
+    n3 -> n4
+    n3 -> n5
+}
