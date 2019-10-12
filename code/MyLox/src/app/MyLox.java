@@ -238,6 +238,9 @@ class Scanner {
         case ';':
             addToken(SEMICOLON);
             break;
+        case '*':
+            addToken(STAR);
+            break;
         // 双字符
         case '!':
             addToken(match('=') ? BANG_EQUAL : BANG);
@@ -313,10 +316,18 @@ public class MyLox {
         }
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
+        Parser parser = new Parser(tokens);
+        Expr expression = parser.parse();
 
-        for (Token token : tokens) {
-            System.out.println(token);
+        if (hadError) {
+            return;
         }
+
+        System.out.println(new AstPrinter().print(expression));
+
+        // for (Token token : tokens) {
+        // System.out.println(token);
+        // }
 
     }
 
@@ -332,6 +343,16 @@ public class MyLox {
 
     static void error(int line, String message) {
         report(line, "", message);
+    }
+
+    static void error(Token token, String message) {
+        if (token.type == EOF) {
+            // 代码结束了
+            report(token.line, " at end", message);
+        } else {
+            // 没有结束
+            report(token.line, " at '" + token.lexeme + "' ", message);
+        }
     }
 
     static void report(int line, String where, String message) {
