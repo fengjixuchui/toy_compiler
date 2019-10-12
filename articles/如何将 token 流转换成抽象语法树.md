@@ -2,7 +2,7 @@
 
 
 
-> 前言：之前我们不是太艰难地将字符流转换成了 token 流，今天我们将尝试将 token 流转换成「抽象语法树」
+> 前言：之前我们不是太艰难地将字符流转换成了 token 流，今天我们将尝试将 token 流转换成「抽象语法树」，本系列博客大部分内容来自 http://www.craftinginterpreters.com/，以下只是我的学习笔记。
 
 
 
@@ -226,15 +226,53 @@ equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 
 
 
-
-
 所以代码写成：
 
-```java
 
+
+```java
+    private Expr equality() {
+        // equality → comparison ( ( "!=" | "==" ) comparison )* ;
+        Expr expr = comparison();
+
+        if (match(BANG_EQUAL, EQUAL_EQUAL)) {
+            Token operator = previous();
+            Expr right = comparison();
+            expr = new Expr.Binary(expr, operator, right);
+            return expr;
+        }
+
+        return expr;
+    }
+
+    private Expr expression() {
+        // expression → equality ;
+        return equality();
+    }
 ```
 
 
+
+一路顺下来就可以写出最后的代码见：https://github.com/TensShinet/toy_compiler/blob/master/code/MyLox/src/app/Parser.java。
+
+
+
+### 最后解释一下 Expr.Binary 这个是什么
+
+
+
+由于现在是简单的表达式：`1+2*3` 这样的，所以表达式的种类并不多。
+
+
+
+只有四种：
+
+
+
++ Unary 一元表达式。-1 
++ Binary 二元表达式 1 + 2
++ Group 组 (expression)
++ Literal 值 现在只有 数字 字符串 true false null
 
 
 
