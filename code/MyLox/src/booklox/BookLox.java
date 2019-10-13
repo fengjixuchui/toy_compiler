@@ -256,6 +256,8 @@ class Scanner {
 
 public class BookLox {
     static boolean hadError = false;
+    static boolean hadRuntimeError = false; 
+    private static final Interpreter interpreter = new Interpreter();
 
     private static void runFile(String path) throws IOException {
         byte[] bytes = Files.readAllBytes(Paths.get(path));
@@ -280,12 +282,13 @@ public class BookLox {
         List<Token> tokens = scanner.scanTokens();
         Parser parser = new Parser(tokens);
         Expr expression = parser.parse();
-
+        
+        interpreter.interpret(expression);
         // Stop if there was a syntax error.
         if (hadError)
             return;
-
-        System.out.println(new AstPrinter().print(expression));
+        if (hadRuntimeError)
+            System.exit(-2);
 
         // // For now, just print the tokens.
         // for (Token token : tokens) {
@@ -303,6 +306,11 @@ public class BookLox {
         } else {
             report(token.line, " at '" + token.lexeme + "'", message);
         }
+    }
+
+    static void runtimeError(RuntimeError error) {
+        System.err.println(error.getMessage() + "\n[line " + error.token.line + "]");
+        hadRuntimeError = true;
     }
 
     private static void report(int line, String where, String message) {
