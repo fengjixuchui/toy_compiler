@@ -106,10 +106,10 @@ public class Parser {
         // multiplication → unary ( ( "/" | "*" ) unary )* ;
         Expr expr = unary();
 
-        if(match(SLASH, STAR)) {
+        while(match(SLASH, STAR)) {
             Token operator = previous();
             Expr right = unary();
-            return new Expr.Binary(expr, operator, right);
+            expr =  new Expr.Binary(expr, operator, right);
         }
 
         return expr;
@@ -119,10 +119,11 @@ public class Parser {
         // addition → multiplication ( ( "-" | "+" ) multiplication )*;
         Expr expr = multiplication();
 
-        if(match(MINUS, PLUS)) {
+        while(match(MINUS, PLUS)) {
             Token operator = previous();
             Expr right = multiplication();
-            return new Expr.Binary(expr, operator, right);
+            expr = new Expr.Binary(expr, operator, right);
+
         }
 
         return expr;
@@ -132,7 +133,7 @@ public class Parser {
         // comparison → addition ( ( ">" | ">=" | "<" | "<=" ) addition )* ;
         Expr expr = addition();
 
-        if(match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
+        while(match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
             Token operator = previous();
             Expr right = addition();
             expr = new Expr.Binary(expr, operator, right);
@@ -145,11 +146,10 @@ public class Parser {
         // equality → comparison ( ( "!=" | "==" ) comparison )* ;
         Expr expr = comparison();
 
-        if (match(BANG_EQUAL, EQUAL_EQUAL)) {
+        while (match(BANG_EQUAL, EQUAL_EQUAL)) {
             Token operator = previous();
             Expr right = comparison();
             expr = new Expr.Binary(expr, operator, right);
-            return expr;
         }
 
         return expr;

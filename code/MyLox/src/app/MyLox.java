@@ -304,6 +304,7 @@ class Scanner {
  */
 public class MyLox {
     static boolean hadError = false;
+    static boolean hadRuntimeError = false;
 
     private static void runFile(String path) throws IOException {
         byte[] bytes = Files.readAllBytes(Paths.get(path));
@@ -314,16 +315,18 @@ public class MyLox {
         if (hadError) {
             System.exit(65);
         }
+        if(hadRuntimeError) {
+            System.exit(70);
+        }
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
         Parser parser = new Parser(tokens);
         Expr expression = parser.parse();
 
-        if (hadError) {
-            return;
-        }
-
-        System.out.println(new AstPrinter().print(expression));
+        // AstPrinter ast = new AstPrinter();
+        // System.out.println(ast.print(expression));
+        Interpreter interpreter = new Interpreter();
+        interpreter.interpret(expression);
 
         // for (Token token : tokens) {
         // System.out.println(token);
@@ -358,6 +361,11 @@ public class MyLox {
     static void report(int line, String where, String message) {
         System.err.println("[line " + line + "] Error" + where + ": " + message);
         hadError = true;
+    }
+
+    static void runtimeError(RuntimeError error) {
+        System.err.println(error.getMessage() + "\n[line " + error.token.line + "]");
+        hadRuntimeError = true;
     }
 
     public static void main(String[] args) throws IOException {
