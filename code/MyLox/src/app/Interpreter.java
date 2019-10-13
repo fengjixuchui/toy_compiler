@@ -14,7 +14,6 @@ class RuntimeError extends RuntimeException {
 }
 
 public class Interpreter implements Expr.Visitor<Object> {
-
     @Override
     public Object visitLiteralExpr(Expr.Literal expr) {
         return expr.value;
@@ -31,9 +30,9 @@ public class Interpreter implements Expr.Visitor<Object> {
         Token operator = expr.operator;
         Object right = evaluate(expr.right);
 
-        checkNumberOperands(operator, right);
         switch (operator.type) {
         case MINUS:
+            checkNumberOperands(operator, right);
             return -(double) right;
         case BANG:
             return !isTruthy(right);
@@ -47,6 +46,7 @@ public class Interpreter implements Expr.Visitor<Object> {
 
     @Override
     public Object visitBinaryExpr(Expr.Binary expr) {
+        // 计算左右值
         Object left = evaluate(expr.left);
         Object right = evaluate(expr.right);
 
@@ -68,6 +68,9 @@ public class Interpreter implements Expr.Visitor<Object> {
             return (double) left - (double) right;
         case SLASH:
             checkNumberOperands(expr.operator, left, right);
+            if ((double) right == 0) {
+                throw new RuntimeError(expr.operator, "divide zero");
+            }
             return (double) left / (double) right;
         case STAR:
             checkNumberOperands(expr.operator, left, right);
@@ -159,7 +162,6 @@ public class Interpreter implements Expr.Visitor<Object> {
             }
             return text;
         }
-
         return object.toString();
     }
 
@@ -169,7 +171,6 @@ public class Interpreter implements Expr.Visitor<Object> {
             Object value = evaluate(expr);
             System.out.println(stringify(value));
         } catch (RuntimeError error) {
-            // TODO: handle exception
             MyLox.runtimeError(error);
         }
     }
