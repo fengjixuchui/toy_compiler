@@ -1,17 +1,71 @@
 package app;
 
-import java.io.IOException;
+import static app.TokenType.AND;
+import static app.TokenType.BANG;
+import static app.TokenType.BANG_EQUAL;
+import static app.TokenType.CLASS;
+import static app.TokenType.COMMA;
+import static app.TokenType.DOT;
+import static app.TokenType.ELSE;
+import static app.TokenType.EOF;
+import static app.TokenType.EQUAL;
+import static app.TokenType.EQUAL_EQUAL;
+import static app.TokenType.FALSE;
+import static app.TokenType.FOR;
+import static app.TokenType.FUN;
+import static app.TokenType.GREATER;
+import static app.TokenType.GREATER_EQUAL;
+import static app.TokenType.IDENTIFIER;
+import static app.TokenType.IF;
+import static app.TokenType.LEFT_BRACE;
+import static app.TokenType.LEFT_PAREN;
+import static app.TokenType.LESS;
+import static app.TokenType.LESS_EQUAL;
+import static app.TokenType.MINUS;
+import static app.TokenType.NIL;
+import static app.TokenType.NUMBER;
+import static app.TokenType.OR;
+import static app.TokenType.PLUS;
+import static app.TokenType.PRINT;
+import static app.TokenType.RETURN;
+import static app.TokenType.RIGHT_BRACE;
+import static app.TokenType.RIGHT_PAREN;
+import static app.TokenType.SEMICOLON;
+import static app.TokenType.SLASH;
+import static app.TokenType.STAR;
+import static app.TokenType.STRING;
+import static app.TokenType.SUPER;
+import static app.TokenType.THIS;
+import static app.TokenType.TRUE;
+import static app.TokenType.VAR;
+import static app.TokenType.WHILE;
+import static app.TokenType.假;
+import static app.TokenType.函数;
+import static app.TokenType.否则;
+import static app.TokenType.声明;
+import static app.TokenType.如果;
+import static app.TokenType.并且;
+import static app.TokenType.当;
+import static app.TokenType.循环;
+import static app.TokenType.或者;
+import static app.TokenType.真;
+import static app.TokenType.空;
+import static app.TokenType.类;
+import static app.TokenType.继承;
+import static app.TokenType.输出;
+import static app.TokenType.返回;
+import static app.TokenType.这个;
 
-import java.nio.file.Paths;
-import java.nio.file.Files;
-import java.nio.charset.Charset;
-import java.util.List;
-import java.util.ArrayList;
-import java.io.InputStreamReader;
 import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import static app.TokenType.*;
 
 class Token {
     final TokenType type;
@@ -320,17 +374,20 @@ public class MyLox {
         }
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
+
+        // for(Token token : tokens) {
+        //     System.out.println(token.toString());
+        // }
+
         Parser parser = new Parser(tokens);
-        Expr expression = parser.parse();
+        List<Stmt> statements = parser.parse();
 
         // AstPrinter ast = new AstPrinter();
-        // System.out.println(ast.print(expression));
-        Interpreter interpreter = new Interpreter();
-        interpreter.interpret(expression);
+        // System.out.println(ast.printStatements(statements));
 
-        // for (Token token : tokens) {
-        // System.out.println(token);
-        // }
+
+        Interpreter interpreter = new Interpreter();
+        interpreter.interpret(statements);
 
     }
 
@@ -339,6 +396,7 @@ public class MyLox {
         InputStreamReader input = new InputStreamReader(System.in);
         BufferedReader reader = new BufferedReader(input);
         for (;;) {
+            System.out.print("> ");
             run(reader.readLine());
             hadError = false;
         }

@@ -1,18 +1,62 @@
 package booklox;
 
-import java.util.List;
+import static booklox.TokenType.BANG;
+import static booklox.TokenType.BANG_EQUAL;
+import static booklox.TokenType.EOF;
+import static booklox.TokenType.EQUAL;
+import static booklox.TokenType.EQUAL_EQUAL;
+import static booklox.TokenType.FALSE;
+import static booklox.TokenType.GREATER;
+import static booklox.TokenType.GREATER_EQUAL;
+import static booklox.TokenType.IDENTIFIER;
+import static booklox.TokenType.LEFT_BRACE;
+import static booklox.TokenType.LEFT_PAREN;
+import static booklox.TokenType.LESS;
+import static booklox.TokenType.LESS_EQUAL;
+import static booklox.TokenType.MINUS;
+import static booklox.TokenType.NIL;
+import static booklox.TokenType.NUMBER;
+import static booklox.TokenType.PLUS;
+import static booklox.TokenType.PRINT;
+import static booklox.TokenType.RIGHT_BRACE;
+import static booklox.TokenType.RIGHT_PAREN;
+import static booklox.TokenType.SEMICOLON;
+import static booklox.TokenType.SLASH;
+import static booklox.TokenType.STAR;
+import static booklox.TokenType.STRING;
+import static booklox.TokenType.TRUE;
+import static booklox.TokenType.VAR;
 
-import static booklox.TokenType.*;
+import java.util.ArrayList;
+import java.util.List;
 
 class Parser {
     private static class ParseError extends RuntimeException {
     }
+
     private final List<Token> tokens;
     private int current = 0;
-    
 
     private Expr expression() {
-        return equality();
+        return assignment();
+    }
+
+    private Expr assignment() {
+        Expr expr = equality();
+
+        if (match(EQUAL)) {
+            Token equals = previous();
+            Expr value = assignment();
+
+            if (expr instanceof Expr.Variable) {
+                Token name = ((Expr.Variable) expr).name;
+                return new Expr.Assign(name, value);
+            }
+
+            error(equals, "Invalid assignment target.");
+        }
+
+        return expr;
     }
 
     private boolean isAtEnd() {
@@ -83,6 +127,7 @@ class Parser {
 
         return primary();
     }
+
     private ParseError error(Token token, String message) {
         BookLox.error(token, message);
         return new ParseError();
@@ -98,6 +143,10 @@ class Parser {
 
         if (match(NUMBER, STRING)) {
             return new Expr.Literal(previous().literal);
+        }
+
+        if (match(IDENTIFIER)) {
+            return new Expr.Variable(previous());
         }
 
         if (match(LEFT_PAREN)) {
@@ -162,12 +211,79 @@ class Parser {
         }
     }
 
-    Expr parse() {
+    // Expr parse() {
+    // try {
+    // return expression();
+    // } catch (ParseError error) {
+    // return null;
+    // }
+    // }
+
+    List<Stmt> parse() {
+        List<Stmt> statements = new ArrayList<>();
+        while (!isAtEnd()) {
+            statements.add(declaration());
+        }
+
+        return statements;
+    }
+
+    private Stmt declaration() {
         try {
-            return expression();
+            if (match(VAR))
+                return varDeclaration();
+
+            return statement();
         } catch (ParseError error) {
+            synchronize();
             return null;
         }
+    }
+
+    private Stmt varDeclaration() {
+        Token name = consume(IDENTIFIER, "Expect variable name.");
+
+        Expr initializer = null;
+        if (match(EQUAL)) {
+            initializer = expression();
+        }
+
+        consume(SEMICOLON, "Expect ';' after variable declaration.");
+        return new Stmt.Var(name, initializer);
+    }
+
+    private List<Stmt> block() {
+        List<Stmt> statements = new ArrayList<>();
+
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            statements.add(declaration());
+        }
+
+        consume(RIGHT_BRACE, "Expect '}' after block.");
+        return statements;
+    }
+
+    private Stmt statement() {
+        if (match(PRINT))
+            return printStatement();
+        if (match(LEFT_BRACE))
+            return new Stmt.Block(block());
+
+        return expressionStatement();
+    }
+
+    private Stmt printStatement() {
+        // 只是得到抽象语法树
+        Expr value = expression();
+        consume(SEMICOLON, "Expect ';' after value.");
+        return new Stmt.Print(value);
+    }
+
+    private Stmt expressionStatement() {
+        // 只是得到抽象语法树
+        Expr expr = expression();
+        consume(SEMICOLON, "Expect ';' after expression.");
+        return new Stmt.Expression(expr);
     }
 
     Parser(List<Token> tokens) {

@@ -7,14 +7,6 @@
             "mainClass": "app.MyLox",
             "projectName": "MyLox",
             "args": "/home/tenshine/Desktop/learn_compiler/code/MyLox/src/app/test.lox"
-        },
-        {
-            "type": "java",
-            "name": "CodeLens (Launch) - BookLox",
-            "request": "launch",
-            "mainClass": "booklox.BookLox",
-            "projectName": "MyLox",
-            "args": "/home/tenshine/Desktop/learn_compiler/code/MyLox/src/booklox/test.lox"
         }
     ]
 }

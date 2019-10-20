@@ -2,12 +2,48 @@
 
 package app;
 
+import java.util.List;
+
 /**
  * AstPrinter
  */
-public class AstPrinter implements Expr.Visitor<String> {
+public class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
     String print(Expr expr) {
         return expr.accept(this);
+    }
+
+    public String printStatements(List<Stmt> statements) {
+        String content = "";
+        int index = 0;
+        for (Stmt statement : statements) {
+            index++;
+            String t = statement.accept(this);
+            content += (t + '\n');
+        }
+
+        return content;
+    }
+
+    @Override
+    public String visitPrintStmt(Stmt.Print stmt) {
+        StringBuilder builder = new StringBuilder();
+
+        builder.append("(").append("PRINT ");
+        builder.append(print(stmt.expression));
+        builder.append(")");
+
+        return builder.toString();
+    }
+
+    @Override
+    public String visitExpressionStmt(Stmt.Expression stmt) {
+        StringBuilder builder = new StringBuilder();
+
+        builder.append("(").append("Expression ");
+        builder.append(print(stmt.expression));
+        builder.append(")");
+
+        return builder.toString();
     }
 
     @Override

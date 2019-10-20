@@ -1,6 +1,28 @@
 package app;
 
-import static app.TokenType.*;
+import static app.TokenType.BANG;
+import static app.TokenType.BANG_EQUAL;
+import static app.TokenType.EOF;
+import static app.TokenType.EQUAL_EQUAL;
+import static app.TokenType.FALSE;
+import static app.TokenType.GREATER;
+import static app.TokenType.GREATER_EQUAL;
+import static app.TokenType.LEFT_PAREN;
+import static app.TokenType.LESS;
+import static app.TokenType.LESS_EQUAL;
+import static app.TokenType.MINUS;
+import static app.TokenType.NIL;
+import static app.TokenType.NUMBER;
+import static app.TokenType.PLUS;
+import static app.TokenType.PRINT;
+import static app.TokenType.RIGHT_PAREN;
+import static app.TokenType.SEMICOLON;
+import static app.TokenType.SLASH;
+import static app.TokenType.STAR;
+import static app.TokenType.STRING;
+import static app.TokenType.TRUE;
+
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -9,8 +31,9 @@ import java.util.List;
 public class Parser {
     private final List<Token> tokens;
     private int current = 0;
-    
-    private static class ParseError extends RuntimeException {}
+
+    private static class ParseError extends RuntimeException {
+    }
 
     Parser(List<Token> tokens) {
         this.tokens = tokens;
@@ -52,34 +75,36 @@ public class Parser {
         }
         return false;
     }
+
     private ParseError error(Token token, String message) {
         MyLox.error(token, message);
         return new ParseError();
     }
+
     private Expr primary() {
-        // primary  → NUMBER | STRING | "false" | "true" | "nil"
-        //          | "(" expression ")" ;
-        if(match(FALSE)) {
+        // primary → NUMBER | STRING | "false" | "true" | "nil"
+        // | "(" expression ")" ;
+        if (match(FALSE)) {
             return new Expr.Literal(false);
         }
-        
-        if(match(TRUE)) {
-            return new Expr.Literal(true);            
-        }
-        
-        if(match(NIL)) {
-            return new Expr.Literal(null);            
+
+        if (match(TRUE)) {
+            return new Expr.Literal(true);
         }
 
-        if(match(STRING, NUMBER)) {
+        if (match(NIL)) {
+            return new Expr.Literal(null);
+        }
+
+        if (match(STRING, NUMBER)) {
             Token token = previous();
             return new Expr.Literal(token.literal);
         }
-        
-        if(match(LEFT_PAREN)) {
+
+        if (match(LEFT_PAREN)) {
             // 可能是左括号
             Expr expr = expression();
-            if(match(RIGHT_PAREN)) {
+            if (match(RIGHT_PAREN)) {
                 return new Expr.Grouping(expr);
             } else {
                 throw error(peek(), "Expect ')' after expression.");
@@ -92,8 +117,8 @@ public class Parser {
 
     private Expr unary() {
         // unary → ( "!" | "-" ) unary
-        //       | primary ;
-        if(match(BANG, MINUS)) {
+        // | primary ;
+        if (match(BANG, MINUS)) {
             Token operator = previous();
             Expr right = unary();
             return new Expr.Unary(operator, right);
@@ -106,10 +131,10 @@ public class Parser {
         // multiplication → unary ( ( "/" | "*" ) unary )* ;
         Expr expr = unary();
 
-        while(match(SLASH, STAR)) {
+        while (match(SLASH, STAR)) {
             Token operator = previous();
             Expr right = unary();
-            expr =  new Expr.Binary(expr, operator, right);
+            expr = new Expr.Binary(expr, operator, right);
         }
 
         return expr;
@@ -119,7 +144,7 @@ public class Parser {
         // addition → multiplication ( ( "-" | "+" ) multiplication )*;
         Expr expr = multiplication();
 
-        while(match(MINUS, PLUS)) {
+        while (match(MINUS, PLUS)) {
             Token operator = previous();
             Expr right = multiplication();
             expr = new Expr.Binary(expr, operator, right);
@@ -133,7 +158,7 @@ public class Parser {
         // comparison → addition ( ( ">" | ">=" | "<" | "<=" ) addition )* ;
         Expr expr = addition();
 
-        while(match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
+        while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
             Token operator = previous();
             Expr right = addition();
             expr = new Expr.Binary(expr, operator, right);
@@ -160,12 +185,42 @@ public class Parser {
         return equality();
     }
 
-    Expr parse() {
-        try {
-            return expression();
-        } catch (ParseError error) {
-            return null;
+    private Stmt printStatement() {
+        Expr expr = expression();
+        // 检查分号 print "some thing";
+        consume(SEMICOLON, "Expect ';' after value.");
+
+        return new Stmt.Print(expr);
+    }
+
+    private void consume(TokenType type, String message) {
+        if(check(type)) {
+            advance();
+            return;
         }
+        // 报错后并没有立刻停止
+        throw error(peek(), message);
+    }
+    private Stmt expressionStatement() {
+        Expr expr = expression();
+        // 检查分号
+        consume(SEMICOLON, "Expect ';' after value.");
+
+        return new Stmt.Expression(expr);
+    }
+    private Stmt statement() {
+        if(match(PRINT)) {
+            return printStatement();
+        }
+        return expressionStatement();     
+    }
+    List<Stmt> parse() {                          
+        List<Stmt> statements = new ArrayList<>();  
+        while (!isAtEnd()) {                        
+            statements.add(statement());              
+        }
+
+        return statements;
     }
 
 }
