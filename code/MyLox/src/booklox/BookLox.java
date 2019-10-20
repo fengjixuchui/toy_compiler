@@ -1,15 +1,54 @@
 package booklox;
 
-import static booklox.TokenType.*;
+import static booklox.TokenType.AND;
+import static booklox.TokenType.BANG;
+import static booklox.TokenType.BANG_EQUAL;
+import static booklox.TokenType.CLASS;
+import static booklox.TokenType.COMMA;
+import static booklox.TokenType.DOT;
+import static booklox.TokenType.ELSE;
+import static booklox.TokenType.EOF;
+import static booklox.TokenType.EQUAL;
+import static booklox.TokenType.EQUAL_EQUAL;
+import static booklox.TokenType.FALSE;
+import static booklox.TokenType.FOR;
+import static booklox.TokenType.FUN;
+import static booklox.TokenType.GREATER;
+import static booklox.TokenType.GREATER_EQUAL;
+import static booklox.TokenType.IDENTIFIER;
+import static booklox.TokenType.IF;
+import static booklox.TokenType.LEFT_BRACE;
+import static booklox.TokenType.LEFT_PAREN;
+import static booklox.TokenType.LESS;
+import static booklox.TokenType.LESS_EQUAL;
+import static booklox.TokenType.MINUS;
+import static booklox.TokenType.NIL;
+import static booklox.TokenType.NUMBER;
+import static booklox.TokenType.OR;
+import static booklox.TokenType.PLUS;
+import static booklox.TokenType.PRINT;
+import static booklox.TokenType.RETURN;
+import static booklox.TokenType.RIGHT_BRACE;
+import static booklox.TokenType.RIGHT_PAREN;
+import static booklox.TokenType.SEMICOLON;
+import static booklox.TokenType.SLASH;
+import static booklox.TokenType.STAR;
+import static booklox.TokenType.STRING;
+import static booklox.TokenType.SUPER;
+import static booklox.TokenType.THIS;
+import static booklox.TokenType.TRUE;
+import static booklox.TokenType.VAR;
+import static booklox.TokenType.WHILE;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 class Token {
@@ -281,9 +320,9 @@ public class BookLox {
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
         Parser parser = new Parser(tokens);
-        Expr expression = parser.parse();
+        List<Stmt> stmt = parser.parse();
         
-        interpreter.interpret(expression);
+        interpreter.interpret(stmt);
         // Stop if there was a syntax error.
         if (hadError)
             return;

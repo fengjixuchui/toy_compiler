@@ -1,5 +1,7 @@
 package app;
 
+import java.util.List;
+
 /**
  * Interpreter
  */
@@ -13,7 +15,7 @@ class RuntimeError extends RuntimeException {
     }
 }
 
-public class Interpreter implements Expr.Visitor<Object> {
+public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     @Override
     public Object visitLiteralExpr(Expr.Literal expr) {
         return expr.value;
@@ -98,6 +100,19 @@ public class Interpreter implements Expr.Visitor<Object> {
 
     }
 
+    @Override
+    public Void visitPrintStmt(Stmt.Print stmt) {
+        Object value = evaluate(stmt.expression);
+        System.out.println(value.toString());
+        return null;
+    }
+
+    @Override
+    public Void visitExpressionStmt(Stmt.Expression stmt) {
+        Object value = evaluate(stmt.expression);
+        return null;
+    }
+
     private void checkNumberOperands(Token operator, Object left, Object right) {
         if (left instanceof Double && right instanceof Double)
             return;
@@ -130,6 +145,11 @@ public class Interpreter implements Expr.Visitor<Object> {
     // 执行表达式
     private Object evaluate(Expr expr) {
         return expr.accept(this);
+    }
+
+    // 执行语句
+    private Object execute(Stmt stmt) {
+        return stmt.accept(this);
     }
 
     // isTruthy
@@ -165,11 +185,21 @@ public class Interpreter implements Expr.Visitor<Object> {
         return object.toString();
     }
 
-    public void interpret(Expr expr) {
+    // public void interpret(Expr expr) {
+    // try {
+    // // 得到一个抽象语法树，然后执行这个抽象语法树
+    // Object value = evaluate(expr);
+    // System.out.println(stringify(value));
+    // } catch (RuntimeError error) {
+    // MyLox.runtimeError(error);
+    // }
+    // }
+
+    public void interpret(List<Stmt> statements) {
         try {
-            // 得到一个抽象语法树，然后执行这个抽象语法树
-            Object value = evaluate(expr);
-            System.out.println(stringify(value));
+            for (Stmt statement : statements) {
+                execute(statement);
+            }
         } catch (RuntimeError error) {
             MyLox.runtimeError(error);
         }
