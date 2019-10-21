@@ -36,7 +36,7 @@
 program   → statement* EOF ;
 
 statement → exprStmt
-          				| printStmt ;
+          				| printStmt
 
 exprStmt  → expression ";" ;
 printStmt → "print" expression ";" ;
@@ -67,6 +67,132 @@ primary        → NUMBER | STRING | "false" | "true" | "nil"
 ## 0X01 代码实现
 
 
+
+我们先简述一下我们要干些什么：
+
+
+
++ 识别代码中的 statement
+
+现在我们只会识别两种 statement。
+
+```python
+statement → exprStmt
+          				| printStmt
+```
+
+
+
+exprStmt 就是像这样的 `1 + 1 + 2;` 式子。printStmt 就是像这样的 print "I Love You"
+
+
+
++ 将每一个 statement 转成一个抽象语法树（Parser）
+
++ 执行每一个 statement（Interpreter）
+
+
+
+### 识别代码中的 statement 以及将 statement 转换成「抽象语法树」
+
+
+
+在 parser 中我们得到的是一个 token 流，我们根据 `;` 分割 statement
+
+
+
+由于 print 的右边就是一个「表达式」，所以我们能够直接兼容上一次的代码，主要代码如下：
+
+
+
+```java
+    private Stmt expressionStatement() {
+        Expr expr = expression();
+        // 检查分号
+        consume(SEMICOLON, "Expect ';' after value.");
+
+        return new Stmt.Expression(expr);
+    }
+    private Stmt statement() {
+        if(match(PRINT)) {
+            return printStatement();
+        }
+        return expressionStatement();     
+    }
+    List<Stmt> parse() {                          
+        List<Stmt> statements = new ArrayList<>();  
+        while (!isAtEnd()) {                        
+            statements.add(statement());              
+        }
+
+        return statements;
+    }
+```
+
+
+
+
+
+### 执行「抽象语法树」
+
+
+
+执行 print 的「抽象语法树」也很简单。
+
+
+
+我们从 statements 出发，执行每一个 statement。
+
+
+
+而对于 print statement 来说，最后要输出的还是它的「右值」，而右值是一个表达式，可以与之前的代码兼容，所以直接计算右值，主要代码如下：
+
+
+
+```java
+@Override
+    public Void visitPrintStmt(Stmt.Print stmt) {
+        Object value = evaluate(stmt.expression);
+        System.out.println(stringify(value));
+        return null;
+    }
+
+    @Override
+    public Void visitExpressionStmt(Stmt.Expression stmt) {
+        Object value = evaluate(stmt.expression);
+        return null;
+    }
+```
+
+
+
+
+
+```java
+// 执行语句
+private Object execute(Stmt stmt) {
+    return stmt.accept(this);
+}
+public void interpret(List<Stmt> statements) {
+        try {
+            for (Stmt statement : statements) {
+                execute(statement);
+            }
+        } catch (RuntimeError error) {
+            MyLox.runtimeError(error);
+        }
+    }
+```
+
+
+
+
+
+最后结果：
+
+
+
+![](https://upload-images.jianshu.io/upload_images/15548795-bafb95d823cd83fb.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
 
 
 
