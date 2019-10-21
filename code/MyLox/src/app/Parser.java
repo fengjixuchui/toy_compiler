@@ -1,30 +1,6 @@
 package app;
 
-import static app.TokenType.BANG;
-import static app.TokenType.BANG_EQUAL;
-import static app.TokenType.EOF;
-import static app.TokenType.EQUAL;
-import static app.TokenType.EQUAL_EQUAL;
-import static app.TokenType.FALSE;
-import static app.TokenType.GREATER;
-import static app.TokenType.GREATER_EQUAL;
-import static app.TokenType.IDENTIFIER;
-import static app.TokenType.LEFT_PAREN;
-import static app.TokenType.LESS;
-import static app.TokenType.LESS_EQUAL;
-import static app.TokenType.MINUS;
-import static app.TokenType.NIL;
-import static app.TokenType.NUMBER;
-import static app.TokenType.PLUS;
-import static app.TokenType.PRINT;
-import static app.TokenType.RIGHT_PAREN;
-import static app.TokenType.SEMICOLON;
-import static app.TokenType.SLASH;
-import static app.TokenType.STAR;
-import static app.TokenType.STRING;
-import static app.TokenType.TRUE;
-import static app.TokenType.VAR;
-
+import static app.TokenType.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -188,9 +164,30 @@ public class Parser {
         return expr;
     }
 
+    private Expr assignment() {
+        // assignment → IDENTIFIER "=" assignment
+        // | equality;
+        // 左值可能需要计算我们先跳过计算左值
+        Expr expr = equality();
+
+        if (match(EQUAL)) {
+            Token equal = previous();
+            Expr value = assignment();
+
+            if (expr instanceof Expr.Variable) {
+                Token name = ((Expr.Variable) expr).name;
+                return new Expr.Assign(name, value);
+            }
+
+            error(equal, "Invalid assignment target.");
+
+        }
+        return expr;
+    }
+
     private Expr expression() {
-        // expression → equality ;
-        return equality();
+        // expression → assignment ;
+        return assignment();
     }
 
     private Stmt printStatement() {
@@ -202,12 +199,13 @@ public class Parser {
     }
 
     private Token consume(TokenType type, String message) {
-        if(check(type)) {
+        if (check(type)) {
             return advance();
         }
         // 报错后并没有立刻停止
         throw error(peek(), message);
     }
+
     private Stmt expressionStatement() {
         Expr expr = expression();
         // 检查分号
@@ -215,36 +213,86 @@ public class Parser {
 
         return new Stmt.Expression(expr);
     }
+
+    private List<Stmt> block() {
+        List<Stmt> statements = new ArrayList<>();
+
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            statements.add(declaration());
+        }
+
+        consume(RIGHT_BRACE, "Expect '}' after block.");
+        return statements;
+    }
+
     private Stmt statement() {
-        if(match(PRINT)) {
+        if (match(PRINT)) {
             return printStatement();
         }
-        return expressionStatement();     
+        if (match(LEFT_BRACE)) {
+            return new Stmt.Block(block());
+        }
+        return expressionStatement();
     }
 
     private Stmt varDeclaration() {
         // varDecl → "var" IDENTIFIER ( "=" expression )? ";" ;
         // 返回变量声明抽象语法树
-        Token identifier = consume(IDENTIFIER, "after var must be an Identifier");
+        Token identifier = consume(IDENTIFIER, "after 'var' must be an Identifier");
         Expr initializer = null;
 
-        if(match(EQUAL)) {
+        if (match(EQUAL)) {
             initializer = expression();
             consume(SEMICOLON, "Expect ';' after value.");
         }
         return new Stmt.Var(identifier, initializer);
     }
-    private Stmt declaration() {
-        if(match(VAR)) {
-            return varDeclaration();
-        } else {
-            return statement();
+
+    private void synchronize() {
+        // 从当前语句中退出
+        // 去生成其他语句的「抽象语法树」
+        advance();
+
+        while (!isAtEnd()) {
+            if (previous().type == SEMICOLON)
+                return;
+
+            switch (peek().type) {
+            case CLASS:
+            case FUN:
+            case VAR:
+            case FOR:
+            case IF:
+            case WHILE:
+            case PRINT:
+            case RETURN:
+                return;
+            }
+
+            advance();
         }
     }
-    List<Stmt> parse() {                          
-        List<Stmt> statements = new ArrayList<>();  
-        while (!isAtEnd()) {                        
-            statements.add(declaration());              
+
+    private Stmt declaration() {
+        // 在这里抓错误
+        try {
+            if (match(VAR)) {
+                return varDeclaration();
+            }
+            return statement();
+        } catch (ParseError e) {
+            // 进入 panic mode
+            synchronize();
+            return null;
+
+        }
+
+    }
+
+    List<Stmt> parse() {
+        List<Stmt> statements = new ArrayList<>();
+        while (!isAtEnd()) {
+            statements.add(declaration());
         }
 
         return statements;
