@@ -16,6 +16,8 @@ class RuntimeError extends RuntimeException {
 }
 
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
+    public final Environment environment = new Environment();
+
     @Override
     public Object visitLiteralExpr(Expr.Literal expr) {
         return expr.value;
@@ -99,11 +101,16 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         return null;
 
     }
-
+    @Override
+    public Object visitVariableExpr(Expr.Variable expr) {
+        // 从环境中得到 token 的 value
+        Object value = environment.get(expr.name);
+        return value;
+    }
     @Override
     public Void visitPrintStmt(Stmt.Print stmt) {
         Object value = evaluate(stmt.expression);
-        System.out.println(value.toString());
+        System.out.println(stringify(value));
         return null;
     }
 
@@ -113,6 +120,15 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         return null;
     }
 
+    @Override
+    public Void visitVarStmt(Stmt.Var stmt) {
+        // 给 environment 中的变量赋值
+        String tokenName = stmt.name.lexeme;
+        Expr expr = stmt.initializer;
+        Object value = evaluate(expr);
+        environment.define(tokenName, value);
+        return null;
+    }
     private void checkNumberOperands(Token operator, Object left, Object right) {
         if (left instanceof Double && right instanceof Double)
             return;

@@ -3,10 +3,12 @@ package app;
 import static app.TokenType.BANG;
 import static app.TokenType.BANG_EQUAL;
 import static app.TokenType.EOF;
+import static app.TokenType.EQUAL;
 import static app.TokenType.EQUAL_EQUAL;
 import static app.TokenType.FALSE;
 import static app.TokenType.GREATER;
 import static app.TokenType.GREATER_EQUAL;
+import static app.TokenType.IDENTIFIER;
 import static app.TokenType.LEFT_PAREN;
 import static app.TokenType.LESS;
 import static app.TokenType.LESS_EQUAL;
@@ -21,6 +23,7 @@ import static app.TokenType.SLASH;
 import static app.TokenType.STAR;
 import static app.TokenType.STRING;
 import static app.TokenType.TRUE;
+import static app.TokenType.VAR;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -99,6 +102,11 @@ public class Parser {
         if (match(STRING, NUMBER)) {
             Token token = previous();
             return new Expr.Literal(token.literal);
+        }
+
+        if (match(IDENTIFIER)) {
+            Token token = previous();
+            return new Expr.Variable(token);
         }
 
         if (match(LEFT_PAREN)) {
@@ -193,10 +201,9 @@ public class Parser {
         return new Stmt.Print(expr);
     }
 
-    private void consume(TokenType type, String message) {
+    private Token consume(TokenType type, String message) {
         if(check(type)) {
-            advance();
-            return;
+            return advance();
         }
         // 报错后并没有立刻停止
         throw error(peek(), message);
@@ -214,10 +221,30 @@ public class Parser {
         }
         return expressionStatement();     
     }
+
+    private Stmt varDeclaration() {
+        // varDecl → "var" IDENTIFIER ( "=" expression )? ";" ;
+        // 返回变量声明抽象语法树
+        Token identifier = consume(IDENTIFIER, "after var must be an Identifier");
+        Expr initializer = null;
+
+        if(match(EQUAL)) {
+            initializer = expression();
+            consume(SEMICOLON, "Expect ';' after value.");
+        }
+        return new Stmt.Var(identifier, initializer);
+    }
+    private Stmt declaration() {
+        if(match(VAR)) {
+            return varDeclaration();
+        } else {
+            return statement();
+        }
+    }
     List<Stmt> parse() {                          
         List<Stmt> statements = new ArrayList<>();  
         while (!isAtEnd()) {                        
-            statements.add(statement());              
+            statements.add(declaration());              
         }
 
         return statements;

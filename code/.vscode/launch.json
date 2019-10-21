@@ -2,6 +2,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "CodeLens (Launch) - GenerateAst",
+            "request": "launch",
+            "mainClass": "tools.GenerateAst",
+            "projectName": "MyLox"
+        },
+        {
+            "type": "java",
             "name": "CodeLens (Launch) - MyLox",
             "request": "launch",
             "mainClass": "app.MyLox",
