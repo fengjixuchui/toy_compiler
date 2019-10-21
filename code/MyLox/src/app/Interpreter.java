@@ -108,11 +108,11 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         // Assign(Token name, Expr value)
         // 顺着作用域链给 Environment 中的「变量」赋值
         Token token = expr.name;
-        Object value = expr.value;
+        Object value = evaluate(expr.value);
 
         environment.assign(token, value);
 
-        return null;
+        return value;
     }
 
     public Object visitVariableExpr(Expr.Variable expr) {
@@ -139,6 +139,10 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         // 给 environment 中的变量赋值
         String tokenName = stmt.name.lexeme;
         Expr expr = stmt.initializer;
+        if(expr == null) {
+            environment.define(tokenName, null);
+            return null;
+        }
         Object value = evaluate(expr);
         environment.define(tokenName, value);
         return null;

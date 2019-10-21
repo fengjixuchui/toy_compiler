@@ -1,6 +1,2 @@
-var a = "I Love You!";
-{
-    var a = "ting ting";
-    print a;
-}
-print a;
+var a;
+print a = 11;

@@ -1,6 +1,32 @@
 package app;
 
-import static app.TokenType.*;
+import static app.TokenType.BANG;
+import static app.TokenType.BANG_EQUAL;
+import static app.TokenType.EOF;
+import static app.TokenType.EQUAL;
+import static app.TokenType.EQUAL_EQUAL;
+import static app.TokenType.FALSE;
+import static app.TokenType.GREATER;
+import static app.TokenType.GREATER_EQUAL;
+import static app.TokenType.IDENTIFIER;
+import static app.TokenType.LEFT_BRACE;
+import static app.TokenType.LEFT_PAREN;
+import static app.TokenType.LESS;
+import static app.TokenType.LESS_EQUAL;
+import static app.TokenType.MINUS;
+import static app.TokenType.NIL;
+import static app.TokenType.NUMBER;
+import static app.TokenType.PLUS;
+import static app.TokenType.PRINT;
+import static app.TokenType.RIGHT_BRACE;
+import static app.TokenType.RIGHT_PAREN;
+import static app.TokenType.SEMICOLON;
+import static app.TokenType.SLASH;
+import static app.TokenType.STAR;
+import static app.TokenType.STRING;
+import static app.TokenType.TRUE;
+import static app.TokenType.VAR;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -243,8 +269,8 @@ public class Parser {
 
         if (match(EQUAL)) {
             initializer = expression();
-            consume(SEMICOLON, "Expect ';' after value.");
         }
+        consume(SEMICOLON, "Expect ';' after value.");
         return new Stmt.Var(identifier, initializer);
     }
 
