@@ -1,2 +1,4 @@
-var a;
-print a = 11;
+var a = 12;
+{
+    print a;
+}

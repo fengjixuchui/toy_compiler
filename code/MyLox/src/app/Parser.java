@@ -199,7 +199,8 @@ public class Parser {
         if (match(EQUAL)) {
             Token equal = previous();
             Expr value = assignment();
-
+            // expr 通过递归，应该得到是一个 Variable，不应该是其他的别的东西
+            // 否则报错
             if (expr instanceof Expr.Variable) {
                 Token name = ((Expr.Variable) expr).name;
                 return new Expr.Assign(name, value);
