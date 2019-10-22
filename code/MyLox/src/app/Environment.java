@@ -23,7 +23,7 @@ public class Environment {
     }
 
     Object get(Token name) {
-        Environment t = enclosing;
+        Environment t = this;
         while (true) {
             if (t == null) {
                 break;
@@ -39,7 +39,7 @@ public class Environment {
     }
 
     void assign(Token name, Object value) {
-        Environment t = enclosing;
+        Environment t = this;
         while (true) {
             if (t == null) {
                 break;

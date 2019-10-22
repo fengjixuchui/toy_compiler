@@ -24,6 +24,30 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Object visitLogicalExpr(Expr.Logical expr) {
+        Object left = evaluate(expr.left);
+        if (isTruthy(left)) {
+            // 如果是 or 直接返回 left
+            // 如果是 and 返回 right
+            // 由返回式的真假判断真假
+            if (expr.operator.type == TokenType.OR) {
+                return left;
+            } else {
+                return evaluate(expr.right);
+            }
+        }
+        // 左值为假
+        // 如果是 or 返回右值
+        if (expr.operator.type == TokenType.OR) {
+            return evaluate(expr.right);
+        }
+
+        // 如果是 and
+        // 返回假的左值
+        return left;
+    }
+
+    @Override
     public Object visitGroupingExpr(Expr.Grouping expr) {
         // 执行表达式
         return evaluate(expr.expression);
@@ -39,6 +63,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             checkNumberOperands(operator, right);
             return -(double) right;
         case BANG:
+            // OR
             return !isTruthy(right);
         default:
             // 不会执行到这里
@@ -122,6 +147,20 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Void visitIfStmt(Stmt.If stmt) {
+        Expr condition = stmt.condition;
+        Stmt thenBranch = stmt.thenBranch;
+        Stmt elseBranch = stmt.elseBranch;
+
+        if (isTruthy(evaluate(condition))) {
+            execute(thenBranch);
+        } else {
+            execute(elseBranch);
+        }
+        return null;
+    }
+
+    @Override
     public Void visitPrintStmt(Stmt.Print stmt) {
         Object value = evaluate(stmt.expression);
         System.out.println(stringify(value));
@@ -139,7 +178,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         // 给 environment 中的变量赋值
         String tokenName = stmt.name.lexeme;
         Expr expr = stmt.initializer;
-        if(expr == null) {
+        if (expr == null) {
             environment.define(tokenName, null);
             return null;
         }

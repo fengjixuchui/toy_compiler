@@ -1,7 +1,9 @@
 package app;
 
+import static app.TokenType.AND;
 import static app.TokenType.BANG;
 import static app.TokenType.BANG_EQUAL;
+import static app.TokenType.ELSE;
 import static app.TokenType.EOF;
 import static app.TokenType.EQUAL;
 import static app.TokenType.EQUAL_EQUAL;
@@ -9,6 +11,7 @@ import static app.TokenType.FALSE;
 import static app.TokenType.GREATER;
 import static app.TokenType.GREATER_EQUAL;
 import static app.TokenType.IDENTIFIER;
+import static app.TokenType.IF;
 import static app.TokenType.LEFT_BRACE;
 import static app.TokenType.LEFT_PAREN;
 import static app.TokenType.LESS;
@@ -16,6 +19,7 @@ import static app.TokenType.LESS_EQUAL;
 import static app.TokenType.MINUS;
 import static app.TokenType.NIL;
 import static app.TokenType.NUMBER;
+import static app.TokenType.OR;
 import static app.TokenType.PLUS;
 import static app.TokenType.PRINT;
 import static app.TokenType.RIGHT_BRACE;
@@ -189,12 +193,35 @@ public class Parser {
 
         return expr;
     }
+    private Expr logic_and() {
+        Expr left = equality();
+
+        while(match(AND)) {
+            Token operator = previous();
+            Expr right = equality();
+            return new Expr.Logical(left, operator, right);
+        }
+        return left;
+    }
+    private Expr logic_or() {
+        Expr left = logic_and();
+
+        while(match(OR)) {
+            Token operator = previous();
+            Expr right = logic_and();
+            return new Expr.Logical(left, operator, right);
+        }
+        return left;
+    }
 
     private Expr assignment() {
-        // assignment → IDENTIFIER "=" assignment
-        // | equality;
+        // expression → assignment ;
+        // assignment → identifier "=" assignment
+        //            | logic_or ;
+        // logic_or   → logic_and ( "or" logic_and )* ;
+        // logic_and  → equality ( "and" equality )* ;
         // 左值可能需要计算我们先跳过计算左值
-        Expr expr = equality();
+        Expr expr = logic_or();
 
         if (match(EQUAL)) {
             Token equal = previous();
@@ -209,11 +236,12 @@ public class Parser {
             error(equal, "Invalid assignment target.");
 
         }
+        
         return expr;
     }
 
     private Expr expression() {
-        // expression → assignment ;
+        // expression → assignment;
         return assignment();
     }
 
@@ -252,6 +280,22 @@ public class Parser {
         return statements;
     }
 
+    private Stmt ifStatement() {
+        // 生成 ifStatement 的抽象语法树
+        // ifStmt → "if" "(" expression ")" statement ( "else" statement )? ;
+        consume(LEFT_PAREN, "Expect '(' after 'if'.");
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "Expect ')' after if condition.");
+
+        Stmt thenBranch = statement();
+        Stmt elseBranch = null;
+
+        if (match(ELSE)) {
+            elseBranch = statement();
+        }
+        return new Stmt.If(condition, thenBranch, elseBranch);
+    }
+
     private Stmt statement() {
         if (match(PRINT)) {
             return printStatement();
@@ -259,13 +303,16 @@ public class Parser {
         if (match(LEFT_BRACE)) {
             return new Stmt.Block(block());
         }
+        if (match(IF)) {
+            return ifStatement();
+        }
         return expressionStatement();
     }
 
     private Stmt varDeclaration() {
         // varDecl → "var" IDENTIFIER ( "=" expression )? ";" ;
         // 返回变量声明抽象语法树
-        Token identifier = consume(IDENTIFIER, "after 'var' must be an Identifier");
+        Token identifier = consume(IDENTIFIER, "After 'var' must be an Identifier");
         Expr initializer = null;
 
         if (match(EQUAL)) {

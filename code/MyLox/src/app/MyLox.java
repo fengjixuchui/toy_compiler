@@ -6,6 +6,7 @@ import static app.TokenType.BANG_EQUAL;
 import static app.TokenType.CLASS;
 import static app.TokenType.COMMA;
 import static app.TokenType.DOT;
+import static app.TokenType.ELIF;
 import static app.TokenType.ELSE;
 import static app.TokenType.EOF;
 import static app.TokenType.EQUAL;
@@ -99,6 +100,7 @@ class Scanner {
         keywords.put("and", AND);
         keywords.put("class", CLASS);
         keywords.put("else", ELSE);
+        keywords.put("elif", ELIF);
         keywords.put("false", FALSE);
         keywords.put("for", FOR);
         keywords.put("fun", FUN);
@@ -157,9 +159,12 @@ class Scanner {
     }
 
     private boolean match(char expected) {
-        if (isAtEnd() || source.charAt(current + 1) != expected) {
+        // 经过 advance 以后
+        // current 指向下一个
+        if (isAtEnd() || source.charAt(current) != expected) {
             return false;
         }
+        // current 始终指向下一个
         current++;
         return true;
     }
@@ -382,8 +387,8 @@ public class MyLox {
         Parser parser = new Parser(tokens);
         List<Stmt> statements = parser.parse();
 
-        // AstPrinter ast = new AstPrinter();
-        // System.out.println(ast.printStatements(statements));
+        // // AstPrinter ast = new AstPrinter();
+        // // System.out.println(ast.printStatements(statements));
 
 
         Interpreter interpreter = new Interpreter();

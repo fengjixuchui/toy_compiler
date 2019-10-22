@@ -1,4 +1,6 @@
 var a = 12;
-{
-    print a;
+if(a == 12) {
+    print "nb";
+} else {
+    print "sb";
 }

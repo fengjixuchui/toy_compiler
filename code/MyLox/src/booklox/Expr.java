@@ -1,6 +1,4 @@
-package app;
-
-import java.util.List;
+package booklox;
 
 abstract class Expr {
     abstract <R> R accept(Visitor<R> visitor);
