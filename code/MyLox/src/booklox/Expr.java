@@ -1,28 +1,16 @@
-package booklox;
+package app;
 
 import java.util.List;
 
 abstract class Expr {
     abstract <R> R accept(Visitor<R> visitor);
     interface Visitor<R> {
-        R visitBlockExpr(Block expr);
         R visitAssignExpr(Assign expr);
         R visitBinaryExpr(Binary expr);
         R visitGroupingExpr(Grouping expr);
         R visitLiteralExpr(Literal expr);
         R visitUnaryExpr(Unary expr);
         R visitVariableExpr(Variable expr);
-    }
-    static class Block extends Expr {
-        Block(List<Stmt> statements) {
-            this.statements = statements;
-        }
-
-        <R> R accept(Visitor<R> visitor) {
-            return visitor.visitBlockExpr(this);
-        }
-
-        final List<Stmt> statements;
     }
     static class Assign extends Expr {
         Assign(Token name, Expr value) {
