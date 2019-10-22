@@ -46,6 +46,8 @@ public class Environment {
             } else {
                 if (t.values.containsKey(name.lexeme)) {
                     t.values.put(name.lexeme, value);
+                    // 退出循环
+                    return;
                 }
                 t = t.enclosing;
             }

@@ -66,6 +66,7 @@ public class GenerateAst {
             "If         : Expr condition, Stmt thenBranch, Stmt elseBranch",
             // 另一个 If 形式包括 多个 elif
             // "If         : "
+            "While      : Expr condition, Stmt body",
             "Expression : Expr expression",            
             "Print      : Expr expression",
             "Var        : Token name, Expr initializer"  
