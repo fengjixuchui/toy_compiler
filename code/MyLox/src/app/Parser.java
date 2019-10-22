@@ -1,14 +1,18 @@
 package app;
 
+import static app.TokenType.AND;
 import static app.TokenType.BANG;
 import static app.TokenType.BANG_EQUAL;
+import static app.TokenType.ELSE;
 import static app.TokenType.EOF;
 import static app.TokenType.EQUAL;
 import static app.TokenType.EQUAL_EQUAL;
 import static app.TokenType.FALSE;
+import static app.TokenType.FOR;
 import static app.TokenType.GREATER;
 import static app.TokenType.GREATER_EQUAL;
 import static app.TokenType.IDENTIFIER;
+import static app.TokenType.IF;
 import static app.TokenType.LEFT_BRACE;
 import static app.TokenType.LEFT_PAREN;
 import static app.TokenType.LESS;
@@ -16,6 +20,7 @@ import static app.TokenType.LESS_EQUAL;
 import static app.TokenType.MINUS;
 import static app.TokenType.NIL;
 import static app.TokenType.NUMBER;
+import static app.TokenType.OR;
 import static app.TokenType.PLUS;
 import static app.TokenType.PRINT;
 import static app.TokenType.RIGHT_BRACE;
@@ -26,8 +31,10 @@ import static app.TokenType.STAR;
 import static app.TokenType.STRING;
 import static app.TokenType.TRUE;
 import static app.TokenType.VAR;
+import static app.TokenType.WHILE;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -190,11 +197,36 @@ public class Parser {
         return expr;
     }
 
+    private Expr logic_and() {
+        Expr left = equality();
+
+        while (match(AND)) {
+            Token operator = previous();
+            Expr right = equality();
+            return new Expr.Logical(left, operator, right);
+        }
+        return left;
+    }
+
+    private Expr logic_or() {
+        Expr left = logic_and();
+
+        while (match(OR)) {
+            Token operator = previous();
+            Expr right = logic_and();
+            return new Expr.Logical(left, operator, right);
+        }
+        return left;
+    }
+
     private Expr assignment() {
-        // assignment → IDENTIFIER "=" assignment
-        // | equality;
+        // expression → assignment ;
+        // assignment → identifier "=" assignment
+        // | logic_or ;
+        // logic_or → logic_and ( "or" logic_and )* ;
+        // logic_and → equality ( "and" equality )* ;
         // 左值可能需要计算我们先跳过计算左值
-        Expr expr = equality();
+        Expr expr = logic_or();
 
         if (match(EQUAL)) {
             Token equal = previous();
@@ -209,11 +241,12 @@ public class Parser {
             error(equal, "Invalid assignment target.");
 
         }
+
         return expr;
     }
 
     private Expr expression() {
-        // expression → assignment ;
+        // expression → assignment;
         return assignment();
     }
 
@@ -234,6 +267,8 @@ public class Parser {
     }
 
     private Stmt expressionStatement() {
+        // expressionStatement 是除了特殊 statement 以外的 statement
+        // 比如赋值
         Expr expr = expression();
         // 检查分号
         consume(SEMICOLON, "Expect ';' after value.");
@@ -252,6 +287,67 @@ public class Parser {
         return statements;
     }
 
+    private Stmt ifStatement() {
+        // 生成 ifStatement 的抽象语法树
+        // ifStmt → "if" "(" expression ")" statement ( "else" statement )? ;
+        consume(LEFT_PAREN, "Expect '(' after 'if'.");
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "Expect ')' after if condition.");
+
+        Stmt thenBranch = statement();
+        Stmt elseBranch = null;
+
+        if (match(ELSE)) {
+            elseBranch = statement();
+        }
+        return new Stmt.If(condition, thenBranch, elseBranch);
+    }
+
+    private Stmt whileStatement() {
+        consume(LEFT_PAREN, "Expect '(' after 'while'.");
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "Expect ')' after while condition.");
+        Stmt body = statement();
+        return new Stmt.While(condition, body);
+    }
+
+    private Stmt forStatement() {
+        consume(LEFT_PAREN, "Expect '(' after 'for'.");
+        Stmt initializer;
+        if (match(SEMICOLON)) {
+            initializer = null;
+        } else if (match(VAR)) {
+            initializer = varDeclaration();
+        } else {
+            initializer = expressionStatement();
+        }
+        Expr condition = null;
+        if (!check(SEMICOLON)) {
+            condition = expression();
+        }
+        consume(SEMICOLON, "Expect ';' after loop condition.");
+
+        Expr increment = null;
+        if (!check(RIGHT_PAREN)) {
+            increment = expression();
+        }
+        consume(RIGHT_PAREN, "Expect ')' after for clauses.");
+        Stmt body = statement();
+        if (increment != null) {
+            body = new Stmt.Block(Arrays.asList(body, new Stmt.Expression(increment)));
+        }
+
+        if (condition == null)
+            condition = new Expr.Literal(true);
+        body = new Stmt.While(condition, body);
+
+        if (initializer != null) {
+            body = new Stmt.Block(Arrays.asList(initializer, body));
+        }
+
+        return body; 
+    }
+
     private Stmt statement() {
         if (match(PRINT)) {
             return printStatement();
@@ -259,13 +355,23 @@ public class Parser {
         if (match(LEFT_BRACE)) {
             return new Stmt.Block(block());
         }
+        if (match(IF)) {
+            return ifStatement();
+        }
+        if (match(WHILE)) {
+            return whileStatement();
+        }
+        // 将 for 转换成 while
+        if (match(FOR)) {
+            return forStatement();
+        }
         return expressionStatement();
     }
 
     private Stmt varDeclaration() {
         // varDecl → "var" IDENTIFIER ( "=" expression )? ";" ;
         // 返回变量声明抽象语法树
-        Token identifier = consume(IDENTIFIER, "after 'var' must be an Identifier");
+        Token identifier = consume(IDENTIFIER, "After 'var' must be an Identifier");
         Expr initializer = null;
 
         if (match(EQUAL)) {

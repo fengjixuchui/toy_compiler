@@ -1,4 +1,4 @@
-package app;
+package booklox;
 
 public enum TokenType {
     // Single-character tokens.

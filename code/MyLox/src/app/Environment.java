@@ -23,7 +23,7 @@ public class Environment {
     }
 
     Object get(Token name) {
-        Environment t = enclosing;
+        Environment t = this;
         while (true) {
             if (t == null) {
                 break;
@@ -39,13 +39,15 @@ public class Environment {
     }
 
     void assign(Token name, Object value) {
-        Environment t = enclosing;
+        Environment t = this;
         while (true) {
             if (t == null) {
                 break;
             } else {
                 if (t.values.containsKey(name.lexeme)) {
                     t.values.put(name.lexeme, value);
+                    // 退出循环
+                    return;
                 }
                 t = t.enclosing;
             }

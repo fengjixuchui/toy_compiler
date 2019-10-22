@@ -1,4 +1,4 @@
-package app;
+package booklox;
 
 import java.util.List;
 
