@@ -1,4 +1,4 @@
-package booklox;
+package app;
 
 import java.util.List;
 
@@ -16,7 +16,7 @@ class RuntimeError extends RuntimeException {
 }
 
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
-    private Environment environment = new Environment();
+    Environment environment = new Environment();
 
     @Override
     public Object visitLiteralExpr(Expr.Literal expr) {
@@ -25,54 +25,32 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     @Override
     public Object visitGroupingExpr(Expr.Grouping expr) {
+        // 执行表达式
         return evaluate(expr.expression);
     }
 
     @Override
     public Object visitUnaryExpr(Expr.Unary expr) {
+        Token operator = expr.operator;
         Object right = evaluate(expr.right);
 
-        switch (expr.operator.type) {
+        switch (operator.type) {
         case MINUS:
-            checkNumberOperand(expr.operator, right);
+            checkNumberOperands(operator, right);
             return -(double) right;
         case BANG:
             return !isTruthy(right);
+        default:
+            // 不会执行到这里
+            break;
         }
-
-        // Unreachable.
+        // 不会执行到这里
         return null;
-    }
-
-    @Override
-    public Object visitAssignExpr(Expr.Assign expr) {
-        Object value = evaluate(expr.value);
-
-        environment.assign(expr.name, value);
-        return value;
-    }
-
-    @Override
-    public Void visitBlockStmt(Stmt.Block stmt) {
-        executeBlock(stmt.statements, new Environment(environment));
-        return null;
-    }
-
-    void executeBlock(List<Stmt> statements, Environment environment) {
-        Environment previous = this.environment;
-        try {
-            this.environment = environment;
-
-            for (Stmt statement : statements) {
-                execute(statement);
-            }
-        } finally {
-            this.environment = previous;
-        }
     }
 
     @Override
     public Object visitBinaryExpr(Expr.Binary expr) {
+        // 计算左右值
         Object left = evaluate(expr.left);
         Object right = evaluate(expr.right);
 
@@ -94,6 +72,9 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             return (double) left - (double) right;
         case SLASH:
             checkNumberOperands(expr.operator, left, right);
+            if ((double) right == 0) {
+                throw new RuntimeError(expr.operator, "divide zero");
+            }
             return (double) left / (double) right;
         case STAR:
             checkNumberOperands(expr.operator, left, right);
@@ -111,10 +92,33 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
                 return (String) left + (String) right;
             }
             throw new RuntimeError(expr.operator, "Operands must be two numbers or two strings.");
+        default:
+            break;
         }
 
         // Unreachable.
+
         return null;
+
+    }
+
+    @Override
+    public Object visitAssignExpr(Expr.Assign expr) {
+        // Assign 的表达式是
+        // Assign(Token name, Expr value)
+        // 顺着作用域链给 Environment 中的「变量」赋值
+        Token token = expr.name;
+        Object value = evaluate(expr.value);
+
+        environment.assign(token, value);
+
+        return value;
+    }
+
+    public Object visitVariableExpr(Expr.Variable expr) {
+        // 从环境中得到 token 的 value
+        Object value = environment.get(expr.name);
+        return value;
     }
 
     @Override
@@ -126,40 +130,41 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     @Override
     public Void visitExpressionStmt(Stmt.Expression stmt) {
-        evaluate(stmt.expression);
+        Object value = evaluate(stmt.expression);
         return null;
-    }
-
-    @Override
-    public Object visitVariableExpr(Expr.Variable expr) {
-        return environment.get(expr.name);
     }
 
     @Override
     public Void visitVarStmt(Stmt.Var stmt) {
-        Object value = null;
-        if (stmt.initializer != null) {
-            value = evaluate(stmt.initializer);
+        // 给 environment 中的变量赋值
+        String tokenName = stmt.name.lexeme;
+        Expr expr = stmt.initializer;
+        if(expr == null) {
+            environment.define(tokenName, null);
+            return null;
         }
-
-        environment.define(stmt.name.lexeme, value);
+        Object value = evaluate(expr);
+        environment.define(tokenName, value);
         return null;
     }
 
-    private boolean isEqual(Object a, Object b) {
-        // nil is only equal to nil.
-        if (a == null && b == null)
-            return true;
-        if (a == null)
-            return false;
+    void executeBlock(List<Stmt> statements, Environment environment) {
+        Environment previous = this.environment;
+        try {
+            this.environment = environment;
 
-        return a.equals(b);
+            for (Stmt statement : statements) {
+                execute(statement);
+            }
+        } finally {
+            this.environment = previous;
+        }
     }
 
-    private void checkNumberOperand(Token operator, Object operand) {
-        if (operand instanceof Double)
-            return;
-        throw new RuntimeError(operator, "Operand must be a number.");
+    @Override
+    public Void visitBlockStmt(Stmt.Block stmt) {
+        executeBlock(stmt.statements, new Environment(environment));
+        return null;
     }
 
     private void checkNumberOperands(Token operator, Object left, Object right) {
@@ -169,23 +174,61 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         throw new RuntimeError(operator, "Operands must be numbers.");
     }
 
-    private boolean isTruthy(Object object) {
-        if (object == null)
-            return false;
-        if (object instanceof Boolean)
-            return (boolean) object;
-        return true;
+    private void checkNumberOperands(Token operator, Object operand) {
+        if (operand instanceof Double)
+            return;
+
+        throw new RuntimeError(operator, "Operands must be numbers.");
     }
 
+    private boolean isEqual(Object a, Object b) {
+        /**
+         * 当两者都为 null 的时候相等 调用 object equal 会调用子类重写的方法 equal
+         */
+        if (a == null && b == null) {
+            return true;
+        }
+
+        if (a == null) {
+            return false;
+        }
+
+        return a.equals(b);
+    }
+
+    // 执行表达式
     private Object evaluate(Expr expr) {
         return expr.accept(this);
+    }
+
+    // 执行语句
+    private Object execute(Stmt stmt) {
+        return stmt.accept(this);
+    }
+
+    // isTruthy
+    private boolean isTruthy(Object obj) {
+        /**
+         * 什么时候是假：null、数字 0、语言本身记录真假 除此之外全为真
+         */
+        if (obj == null) {
+            return false;
+        }
+        // 由于 obj 是数字是全部由 Double 代替
+        if (obj instanceof Double) {
+            double value = (double) obj;
+            return (value != 0);
+        }
+
+        if (obj instanceof Boolean)
+            return (boolean) obj;
+
+        return true;
     }
 
     private String stringify(Object object) {
         if (object == null)
             return "nil";
-
-        // Hack. Work around Java adding ".0" to integer-valued doubles.
         if (object instanceof Double) {
             String text = object.toString();
             if (text.endsWith(".0")) {
@@ -193,30 +236,16 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             }
             return text;
         }
-
         return object.toString();
     }
 
-    private void execute(Stmt stmt) {
-        stmt.accept(this);
-    }
-
-    void interpret(Expr expression) {
-        try {
-            Object value = evaluate(expression);
-            System.out.println(stringify(value));
-        } catch (RuntimeError error) {
-            BookLox.runtimeError(error);
-        }
-    }
-
-    void interpret(List<Stmt> statements) {
+    public void interpret(List<Stmt> statements) {
         try {
             for (Stmt statement : statements) {
                 execute(statement);
             }
         } catch (RuntimeError error) {
-            BookLox.runtimeError(error);
+            MyLox.runtimeError(error);
         }
     }
 }

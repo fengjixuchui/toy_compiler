@@ -16,7 +16,7 @@ class RuntimeError extends RuntimeException {
 }
 
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
-    public final Environment environment = new Environment();
+    Environment environment = new Environment();
 
     @Override
     public Object visitLiteralExpr(Expr.Literal expr) {
@@ -101,12 +101,26 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         return null;
 
     }
+
     @Override
+    public Object visitAssignExpr(Expr.Assign expr) {
+        // Assign 的表达式是
+        // Assign(Token name, Expr value)
+        // 顺着作用域链给 Environment 中的「变量」赋值
+        Token token = expr.name;
+        Object value = evaluate(expr.value);
+
+        environment.assign(token, value);
+
+        return value;
+    }
+
     public Object visitVariableExpr(Expr.Variable expr) {
         // 从环境中得到 token 的 value
         Object value = environment.get(expr.name);
         return value;
     }
+
     @Override
     public Void visitPrintStmt(Stmt.Print stmt) {
         Object value = evaluate(stmt.expression);
@@ -125,10 +139,34 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         // 给 environment 中的变量赋值
         String tokenName = stmt.name.lexeme;
         Expr expr = stmt.initializer;
+        if(expr == null) {
+            environment.define(tokenName, null);
+            return null;
+        }
         Object value = evaluate(expr);
         environment.define(tokenName, value);
         return null;
     }
+
+    void executeBlock(List<Stmt> statements, Environment environment) {
+        Environment previous = this.environment;
+        try {
+            this.environment = environment;
+
+            for (Stmt statement : statements) {
+                execute(statement);
+            }
+        } finally {
+            this.environment = previous;
+        }
+    }
+
+    @Override
+    public Void visitBlockStmt(Stmt.Block stmt) {
+        executeBlock(stmt.statements, new Environment(environment));
+        return null;
+    }
+
     private void checkNumberOperands(Token operator, Object left, Object right) {
         if (left instanceof Double && right instanceof Double)
             return;
@@ -200,16 +238,6 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         }
         return object.toString();
     }
-
-    // public void interpret(Expr expr) {
-    // try {
-    // // 得到一个抽象语法树，然后执行这个抽象语法树
-    // Object value = evaluate(expr);
-    // System.out.println(stringify(value));
-    // } catch (RuntimeError error) {
-    // MyLox.runtimeError(error);
-    // }
-    // }
 
     public void interpret(List<Stmt> statements) {
         try {

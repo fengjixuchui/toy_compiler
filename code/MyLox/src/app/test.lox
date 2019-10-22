@@ -1,2 +1,4 @@
-var a = "I Love You!";
-print a;
+var a = 12;
+{
+    print a;
+}
