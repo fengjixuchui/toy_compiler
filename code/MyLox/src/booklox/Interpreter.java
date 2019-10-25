@@ -1,5 +1,6 @@
 package booklox;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -15,8 +16,37 @@ class RuntimeError extends RuntimeException {
     }
 }
 
+class Return extends RuntimeException {
+    final Object value;
+
+    Return(Object value) {
+        super(null, null, false, false);
+        this.value = value;
+    }
+}
+
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
-    Environment environment = new Environment();
+    final Environment globals = new Environment();
+    private Environment environment = globals;
+
+    Interpreter() {
+        globals.define("clock", new LoxCallable() {
+            @Override
+            public int arity() {
+                return 0;
+            }
+
+            @Override
+            public Object call(Interpreter interpreter, List<Object> arguments) {
+                return (double) System.currentTimeMillis() / 1000.0;
+            }
+
+            @Override
+            public String toString() {
+                return "<native fn>";
+            }
+        });
+    }
 
     @Override
     public Object visitLiteralExpr(Expr.Literal expr) {
@@ -24,9 +54,53 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Object visitLogicalExpr(Expr.Logical expr) {
+        Object left = evaluate(expr.left);
+        if (isTruthy(left)) {
+            // 如果是 or 直接返回 left
+            // 如果是 and 返回 right
+            // 由返回式的真假判断真假
+            if (expr.operator.type == TokenType.OR) {
+                return left;
+            } else {
+                return evaluate(expr.right);
+            }
+        }
+        // 左值为假
+        // 如果是 or 返回右值
+        if (expr.operator.type == TokenType.OR) {
+            return evaluate(expr.right);
+        }
+
+        // 如果是 and
+        // 返回假的左值
+        return left;
+    }
+
+    @Override
     public Object visitGroupingExpr(Expr.Grouping expr) {
         // 执行表达式
         return evaluate(expr.expression);
+    }
+
+    @Override
+    public Object visitCallExpr(Expr.Call expr) {
+        Object callee = evaluate(expr.callee);
+
+        List<Object> arguments = new ArrayList<>();
+        for (Expr argument : expr.arguments) {
+            arguments.add(evaluate(argument));
+        }
+        if (!(callee instanceof LoxCallable)) {
+            throw new RuntimeError(expr.paren, "Can only call functions and classes.");
+        }
+
+        LoxCallable function = (LoxCallable) callee;
+        if (arguments.size() != function.arity()) {
+            throw new RuntimeError(expr.paren,
+                    "Expected " + function.arity() + " arguments but got " + arguments.size() + ".");
+        }
+        return function.call(this, arguments);
     }
 
     @Override
@@ -39,6 +113,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             checkNumberOperands(operator, right);
             return -(double) right;
         case BANG:
+            // OR
             return !isTruthy(right);
         default:
             // 不会执行到这里
@@ -122,6 +197,31 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Void visitIfStmt(Stmt.If stmt) {
+        Expr condition = stmt.condition;
+        Stmt thenBranch = stmt.thenBranch;
+        Stmt elseBranch = stmt.elseBranch;
+
+        if (isTruthy(evaluate(condition))) {
+            execute(thenBranch);
+        } else {
+            execute(elseBranch);
+        }
+        return null;
+    }
+
+    @Override
+    public Void visitWhileStmt(Stmt.While stmt) {
+        Expr condition = stmt.condition;
+        Stmt body = stmt.body;
+
+        while (isTruthy(evaluate(condition))) {
+            execute(body);
+        }
+        return null;
+    }
+
+    @Override
     public Void visitPrintStmt(Stmt.Print stmt) {
         Object value = evaluate(stmt.expression);
         System.out.println(stringify(value));
@@ -139,7 +239,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         // 给 environment 中的变量赋值
         String tokenName = stmt.name.lexeme;
         Expr expr = stmt.initializer;
-        if(expr == null) {
+        if (expr == null) {
             environment.define(tokenName, null);
             return null;
         }
@@ -204,6 +304,23 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     // 执行语句
     private Object execute(Stmt stmt) {
         return stmt.accept(this);
+    }
+
+    @Override
+    public Void visitReturnStmt(Stmt.Return stmt) {
+        Object value = null;
+        if (stmt.value != null)
+            value = evaluate(stmt.value);
+
+        throw new Return(value);
+    }
+
+    @Override
+    public Void visitFunctionStmt(Stmt.Function stmt) {
+        // environment 是当前环境
+        LoxFunction function = new LoxFunction(stmt, environment);
+        environment.define(stmt.name.lexeme, function);
+        return null;
     }
 
     // isTruthy

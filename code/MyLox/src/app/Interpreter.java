@@ -1,6 +1,7 @@
 package app;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Interpreter
@@ -12,6 +13,15 @@ class RuntimeError extends RuntimeException {
     RuntimeError(Token token, String message) {
         super(message);
         this.token = token;
+    }
+}
+
+class Return extends RuntimeException {
+    final Object value;
+
+    Return(Object value) {
+        super(null, null, false, false);
+        this.value = value;
     }
 }
 
@@ -140,10 +150,34 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         return value;
     }
 
+    @Override
     public Object visitVariableExpr(Expr.Variable expr) {
         // 从环境中得到 token 的 value
         Object value = environment.get(expr.name);
         return value;
+    }
+
+    @Override
+    public Object visitCallExpr(Expr.Call call) {
+        // 执行函数
+        Object callee = evaluate(call.callee);
+        // 计算所有参数
+        List<Object> args = new ArrayList<>();
+        for (Expr arg : call.arguments) {
+            Object value = evaluate(arg);
+            args.add(value);
+        }
+        // call.callee 是一个 variable
+        // 所以 evaluate 之后能得到环境中的函数
+        LoxFunction function = (LoxFunction) callee;
+
+        // 运行时错误，判断给定的参数是不是等于定义时的参数个数
+        if (args.size() != function.arity()) {
+            throw new RuntimeError(call.mark,
+                    "Expected " + function.arity() + " arguments but got " + args.size() + ".");
+        }
+        return function.call(this, args);
+
     }
 
     @Override
@@ -165,7 +199,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         Expr condition = stmt.condition;
         Stmt body = stmt.body;
 
-        while(isTruthy(evaluate(condition))) {
+        while (isTruthy(evaluate(condition))) {
             execute(body);
         }
         return null;
@@ -185,6 +219,12 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Void visitReturnStmt(Stmt.Return stmt) {
+        Object value = evaluate(stmt.expr);
+        throw new Return(value);
+    }
+
+    @Override
     public Void visitVarStmt(Stmt.Var stmt) {
         // 给 environment 中的变量赋值
         String tokenName = stmt.name.lexeme;
@@ -198,7 +238,17 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         return null;
     }
 
-    void executeBlock(List<Stmt> statements, Environment environment) {
+    @Override
+    public Void visitFunctionStmt(Stmt.Function function) {
+        // 定义函数
+        // 在当前环境中定义函数并且将
+        String name = function.name.lexeme;
+        LoxFunction func = new LoxFunction(function, environment);
+        environment.define(name, func);
+        return null;
+    }
+
+    public void executeBlock(List<Stmt> statements, Environment environment) {
         Environment previous = this.environment;
         try {
             this.environment = environment;

@@ -6,6 +6,7 @@ import static booklox.TokenType.BANG_EQUAL;
 import static booklox.TokenType.CLASS;
 import static booklox.TokenType.COMMA;
 import static booklox.TokenType.DOT;
+import static booklox.TokenType.ELIF;
 import static booklox.TokenType.ELSE;
 import static booklox.TokenType.EOF;
 import static booklox.TokenType.EQUAL;
@@ -99,6 +100,7 @@ class Scanner {
         keywords.put("and", AND);
         keywords.put("class", CLASS);
         keywords.put("else", ELSE);
+        keywords.put("elif", ELIF);
         keywords.put("false", FALSE);
         keywords.put("for", FOR);
         keywords.put("fun", FUN);
@@ -157,9 +159,12 @@ class Scanner {
     }
 
     private boolean match(char expected) {
-        if (isAtEnd() || source.charAt(current + 1) != expected) {
+        // 经过 advance 以后
+        // current 指向下一个
+        if (isAtEnd() || source.charAt(current) != expected) {
             return false;
         }
+        // current 始终指向下一个
         current++;
         return true;
     }
@@ -382,8 +387,8 @@ public class MyLox {
         Parser parser = new Parser(tokens);
         List<Stmt> statements = parser.parse();
 
-        // AstPrinter ast = new AstPrinter();
-        // System.out.println(ast.printStatements(statements));
+        // // // AstPrinter ast = new AstPrinter();
+        // // // System.out.println(ast.printStatements(statements));
 
 
         Interpreter interpreter = new Interpreter();

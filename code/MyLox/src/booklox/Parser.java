@@ -1,14 +1,20 @@
 package booklox;
 
+import static booklox.TokenType.AND;
 import static booklox.TokenType.BANG;
 import static booklox.TokenType.BANG_EQUAL;
+import static booklox.TokenType.COMMA;
+import static booklox.TokenType.ELSE;
 import static booklox.TokenType.EOF;
 import static booklox.TokenType.EQUAL;
 import static booklox.TokenType.EQUAL_EQUAL;
 import static booklox.TokenType.FALSE;
+import static booklox.TokenType.FOR;
+import static booklox.TokenType.FUN;
 import static booklox.TokenType.GREATER;
 import static booklox.TokenType.GREATER_EQUAL;
 import static booklox.TokenType.IDENTIFIER;
+import static booklox.TokenType.IF;
 import static booklox.TokenType.LEFT_BRACE;
 import static booklox.TokenType.LEFT_PAREN;
 import static booklox.TokenType.LESS;
@@ -16,8 +22,10 @@ import static booklox.TokenType.LESS_EQUAL;
 import static booklox.TokenType.MINUS;
 import static booklox.TokenType.NIL;
 import static booklox.TokenType.NUMBER;
+import static booklox.TokenType.OR;
 import static booklox.TokenType.PLUS;
 import static booklox.TokenType.PRINT;
+import static booklox.TokenType.RETURN;
 import static booklox.TokenType.RIGHT_BRACE;
 import static booklox.TokenType.RIGHT_PAREN;
 import static booklox.TokenType.SEMICOLON;
@@ -26,8 +34,10 @@ import static booklox.TokenType.STAR;
 import static booklox.TokenType.STRING;
 import static booklox.TokenType.TRUE;
 import static booklox.TokenType.VAR;
+import static booklox.TokenType.WHILE;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -134,7 +144,37 @@ public class Parser {
             return new Expr.Unary(operator, right);
         }
 
-        return primary();
+        return call();
+    }
+
+    private Expr call() {
+        Expr expr = primary();
+
+        while (true) {
+            if (match(LEFT_PAREN)) {
+                expr = finishCall(expr);
+            } else {
+                break;
+            }
+        }
+
+        return expr;
+    }
+
+    private Expr finishCall(Expr callee) {
+        List<Expr> arguments = new ArrayList<>();
+        if (!check(RIGHT_PAREN)) {
+            do {
+                if (arguments.size() >= 255) {
+                    error(peek(), "Cannot have more than 255 arguments.");
+                }
+                arguments.add(expression());
+            } while (match(COMMA));
+        }
+
+        Token paren = consume(RIGHT_PAREN, "Expect ')' after arguments.");
+
+        return new Expr.Call(callee, paren, arguments);
     }
 
     private Expr multiplication() {
@@ -190,11 +230,36 @@ public class Parser {
         return expr;
     }
 
+    private Expr logic_and() {
+        Expr left = equality();
+
+        while (match(AND)) {
+            Token operator = previous();
+            Expr right = equality();
+            return new Expr.Logical(left, operator, right);
+        }
+        return left;
+    }
+
+    private Expr logic_or() {
+        Expr left = logic_and();
+
+        while (match(OR)) {
+            Token operator = previous();
+            Expr right = logic_and();
+            return new Expr.Logical(left, operator, right);
+        }
+        return left;
+    }
+
     private Expr assignment() {
-        // assignment → IDENTIFIER "=" assignment
-        // | equality;
+        // expression → assignment ;
+        // assignment → identifier "=" assignment
+        // | logic_or ;
+        // logic_or → logic_and ( "or" logic_and )* ;
+        // logic_and → equality ( "and" equality )* ;
         // 左值可能需要计算我们先跳过计算左值
-        Expr expr = equality();
+        Expr expr = logic_or();
 
         if (match(EQUAL)) {
             Token equal = previous();
@@ -209,11 +274,12 @@ public class Parser {
             error(equal, "Invalid assignment target.");
 
         }
+
         return expr;
     }
 
     private Expr expression() {
-        // expression → assignment ;
+        // expression → assignment;
         return assignment();
     }
 
@@ -234,6 +300,8 @@ public class Parser {
     }
 
     private Stmt expressionStatement() {
+        // expressionStatement 是除了特殊 statement 以外的 statement
+        // 比如赋值
         Expr expr = expression();
         // 检查分号
         consume(SEMICOLON, "Expect ';' after value.");
@@ -252,6 +320,78 @@ public class Parser {
         return statements;
     }
 
+    private Stmt ifStatement() {
+        // 生成 ifStatement 的抽象语法树
+        // ifStmt → "if" "(" expression ")" statement ( "else" statement )? ;
+        consume(LEFT_PAREN, "Expect '(' after 'if'.");
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "Expect ')' after if condition.");
+
+        Stmt thenBranch = statement();
+        Stmt elseBranch = null;
+
+        if (match(ELSE)) {
+            elseBranch = statement();
+        }
+        return new Stmt.If(condition, thenBranch, elseBranch);
+    }
+
+    private Stmt whileStatement() {
+        consume(LEFT_PAREN, "Expect '(' after 'while'.");
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "Expect ')' after while condition.");
+        Stmt body = statement();
+        return new Stmt.While(condition, body);
+    }
+
+    private Stmt forStatement() {
+        consume(LEFT_PAREN, "Expect '(' after 'for'.");
+        Stmt initializer;
+        if (match(SEMICOLON)) {
+            initializer = null;
+        } else if (match(VAR)) {
+            initializer = varDeclaration();
+        } else {
+            initializer = expressionStatement();
+        }
+        Expr condition = null;
+        if (!check(SEMICOLON)) {
+            condition = expression();
+        }
+        consume(SEMICOLON, "Expect ';' after loop condition.");
+
+        Expr increment = null;
+        if (!check(RIGHT_PAREN)) {
+            increment = expression();
+        }
+        consume(RIGHT_PAREN, "Expect ')' after for clauses.");
+        Stmt body = statement();
+        if (increment != null) {
+            body = new Stmt.Block(Arrays.asList(body, new Stmt.Expression(increment)));
+        }
+
+        if (condition == null)
+            condition = new Expr.Literal(true);
+        body = new Stmt.While(condition, body);
+
+        if (initializer != null) {
+            body = new Stmt.Block(Arrays.asList(initializer, body));
+        }
+
+        return body;
+    }
+
+    private Stmt returnStatement() {
+        Token keyword = previous();
+        Expr value = null;
+        if (!check(SEMICOLON)) {
+            value = expression();
+        }
+
+        consume(SEMICOLON, "Expect ';' after return value.");
+        return new Stmt.Return(keyword, value);
+    }
+
     private Stmt statement() {
         if (match(PRINT)) {
             return printStatement();
@@ -259,13 +399,27 @@ public class Parser {
         if (match(LEFT_BRACE)) {
             return new Stmt.Block(block());
         }
+        if (match(IF)) {
+            return ifStatement();
+        }
+        if (match(WHILE)) {
+            return whileStatement();
+        }
+        // 将 for 转换成 while
+        if (match(FOR)) {
+            return forStatement();
+        }
+
+        if (match(RETURN)) {
+            return returnStatement();
+        }
         return expressionStatement();
     }
 
     private Stmt varDeclaration() {
         // varDecl → "var" IDENTIFIER ( "=" expression )? ";" ;
         // 返回变量声明抽象语法树
-        Token identifier = consume(IDENTIFIER, "after 'var' must be an Identifier");
+        Token identifier = consume(IDENTIFIER, "After 'var' must be an Identifier");
         Expr initializer = null;
 
         if (match(EQUAL)) {
@@ -300,11 +454,34 @@ public class Parser {
         }
     }
 
+    private Stmt.Function function(String kind) {
+        Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
+        consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
+        List<Token> parameters = new ArrayList<>();
+        if (!check(RIGHT_PAREN)) {
+            do {
+                if (parameters.size() >= 255) {
+                    error(peek(), "Cannot have more than 255 parameters.");
+                }
+
+                parameters.add(consume(IDENTIFIER, "Expect parameter name."));
+            } while (match(COMMA));
+        }
+        consume(RIGHT_PAREN, "Expect ')' after parameters.");
+
+        consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
+        List<Stmt> body = block();
+        return new Stmt.Function(name, parameters, body);
+    }
+
     private Stmt declaration() {
         // 在这里抓错误
         try {
             if (match(VAR)) {
                 return varDeclaration();
+            }
+            if (match(FUN)) {
+                return function("function");
             }
             return statement();
         } catch (ParseError e) {
