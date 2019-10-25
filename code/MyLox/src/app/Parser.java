@@ -1,37 +1,6 @@
 package app;
 
-import static app.TokenType.AND;
-import static app.TokenType.BANG;
-import static app.TokenType.BANG_EQUAL;
-import static app.TokenType.ELSE;
-import static app.TokenType.EOF;
-import static app.TokenType.EQUAL;
-import static app.TokenType.EQUAL_EQUAL;
-import static app.TokenType.FALSE;
-import static app.TokenType.FOR;
-import static app.TokenType.GREATER;
-import static app.TokenType.GREATER_EQUAL;
-import static app.TokenType.IDENTIFIER;
-import static app.TokenType.IF;
-import static app.TokenType.LEFT_BRACE;
-import static app.TokenType.LEFT_PAREN;
-import static app.TokenType.LESS;
-import static app.TokenType.LESS_EQUAL;
-import static app.TokenType.MINUS;
-import static app.TokenType.NIL;
-import static app.TokenType.NUMBER;
-import static app.TokenType.OR;
-import static app.TokenType.PLUS;
-import static app.TokenType.PRINT;
-import static app.TokenType.RIGHT_BRACE;
-import static app.TokenType.RIGHT_PAREN;
-import static app.TokenType.SEMICOLON;
-import static app.TokenType.SLASH;
-import static app.TokenType.STAR;
-import static app.TokenType.STRING;
-import static app.TokenType.TRUE;
-import static app.TokenType.VAR;
-import static app.TokenType.WHILE;
+import static app.TokenType.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -141,7 +110,54 @@ public class Parser {
             return new Expr.Unary(operator, right);
         }
 
-        return primary();
+        return call();
+    }
+
+    private Expr call() {
+        // 匹配 primary ( "(" arguments? ")" )* ;
+        Expr expr = primary();
+
+        // 有这样几种情况：
+        // A() A()() A(a, b, c)()
+
+        // 如果 interpreter 遇到了这个表达式
+        // Call(Expr callee, Token mark, List<Expr> arguments)
+        // 先执行 callee 然后把 arguments 定义到环境中
+
+        // 所以我们得不断匹配 callee 部分
+        // 如果下一个 token 还是 ( 就把之前得到 callee + 参数部分 变成下一个 callee
+
+        Expr callee = expr;
+        while (match(LEFT_PAREN)) {
+            callee = getCallee(callee);
+        }
+        expr = callee;
+
+        return expr;
+    }
+
+    private Expr getCallee(Expr callee) {
+        List<Expr> arguments = new ArrayList<>();
+
+        if (match(RIGHT_PAREN)) {
+            // 无参数
+            Token mark = previous();
+            return new Expr.Call(callee, mark, arguments);
+        }
+
+        // 有参数
+        do {
+            if (arguments.size() >= 255) {
+                error(peek(), "Cannot have more than 255 arguments.");
+            }
+            Expr arg = expression();
+            arguments.add(arg);
+        } while (match(COMMA));
+
+        // 匹配最后一个 )
+        consume(RIGHT_PAREN, "Expect a ')'.");
+        Token mark = previous();
+        return new Expr.Call(callee, mark, arguments);
     }
 
     private Expr multiplication() {
@@ -345,9 +361,15 @@ public class Parser {
             body = new Stmt.Block(Arrays.asList(initializer, body));
         }
 
-        return body; 
+        return body;
     }
 
+    private Stmt returnStatement() {
+        Expr expr = expression();
+        consume(SEMICOLON, "Expect ';' after return");
+
+        return new Stmt.Return(expr);
+    }
     private Stmt statement() {
         if (match(PRINT)) {
             return printStatement();
@@ -364,6 +386,10 @@ public class Parser {
         // 将 for 转换成 while
         if (match(FOR)) {
             return forStatement();
+        }
+
+        if (match(RETURN)) {
+            return returnStatement();
         }
         return expressionStatement();
     }
@@ -406,11 +432,43 @@ public class Parser {
         }
     }
 
+    private Stmt funcDeclaration() {
+        // Token name, List<Token> params, List<Stmt> body
+        Token name = consume(IDENTIFIER, "Expect function name.");
+        consume(LEFT_PAREN, "Expect '(' in function declaration");
+
+        List<Token> params = new ArrayList<>();
+        if (match(RIGHT_PAREN)) {
+            // 没参数
+            // 程序的 body，先消耗一个 {
+            consume(LEFT_BRACE, "Expect parameter name.");
+            List<Stmt> body = block();
+            return new Stmt.Function(name, params, body);
+        }
+        // 有参数
+        do {
+            if (params.size() >= 255) {
+                error(peek(), "Cannot have more than 255 parameters.");
+            }
+            Token para = consume(IDENTIFIER, "Expect parameter name.");
+            params.add(para);
+        } while (match(COMMA));
+
+        consume(RIGHT_PAREN, "Expect ')'.");
+        consume(LEFT_BRACE, "Expect '{'.");
+        List<Stmt> body = block();
+        return new Stmt.Function(name, params, body);
+    }
+
     private Stmt declaration() {
         // 在这里抓错误
         try {
             if (match(VAR)) {
                 return varDeclaration();
+            }
+            // 函数声明
+            if (match(FUN)) {
+                return funcDeclaration();
             }
             return statement();
         } catch (ParseError e) {

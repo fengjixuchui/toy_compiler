@@ -58,6 +58,8 @@ public class GenerateAst {
             "Grouping   : Expr expression", 
             "Literal    : Object value", 
             "Unary      : Token operator, Expr right",
+            // mark 记录 token 的位置
+            "Call       : Expr callee, Token mark, List<Expr> arguments",
             "Variable   : Token name"  
         ));
 
@@ -69,7 +71,9 @@ public class GenerateAst {
             "While      : Expr condition, Stmt body",
             "Expression : Expr expression",            
             "Print      : Expr expression",
-            "Var        : Token name, Expr initializer"  
+            "Function   : Token name, List<Token> params, List<Stmt> body",
+            "Return        : Expr expr",
+            "Var        : Token name, Expr initializer"
         ));
         
     }

@@ -52,7 +52,9 @@ public class GenerateAst {
 
         String outputDir = args[0];
         defineAst(outputDir, "Expr", Arrays.asList(
-            "Assign     : Token name, Expr value",  
+            "Assign     : Token name, Expr value",
+            "Call       : Expr callee, Token paren, List<Expr> arguments",
+            "Logical    : Expr left, Token operator, Expr right",
             "Binary     : Expr left, Token operator, Expr right",
             "Grouping   : Expr expression", 
             "Literal    : Object value", 
@@ -61,9 +63,15 @@ public class GenerateAst {
         ));
 
         defineAst(outputDir, "Stmt", Arrays.asList(
+            "Function   : Token name, List<Token> params, List<Stmt> body", 
             "Block      : List<Stmt> statements",    
+            "If         : Expr condition, Stmt thenBranch, Stmt elseBranch",
+            // 另一个 If 形式包括 多个 elif
+            // "If         : "
+            "While      : Expr condition, Stmt body",
             "Expression : Expr expression",            
             "Print      : Expr expression",
+            "Return     : Token keyword, Expr value",   
             "Var        : Token name, Expr initializer"  
         ));
         
