@@ -1,14 +1,27 @@
-fun a(a, b, c) {
-    print "I Love You!";
-    print a + b + c;
+fun add(a, b, c) {
+    return a+b+c;
+}
 
-    fun cao() {
+fun b() {
+
+    var a = 0;
+    fun closure() {
+        a = a + 1;
         print a;
     }
 
-    return cao;
+    return closure;
 }
 
-var b = a(1, 2, 3);
+fun main() {
+    if(1) {
+        var function = b();
 
-b();
+        function();
+        function();
+    } else {
+        print add(1, 2, 3);
+    }
+}
+
+main();
