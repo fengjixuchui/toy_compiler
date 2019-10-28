@@ -15,10 +15,10 @@ fun b() {
 
 fun main() {
     if(1) {
-        var function = b();
+        var fun1 = b();
 
-        function();
-        function();
+        fun1();
+        fun1();
     } else {
         print add(1, 2, 3);
     }
